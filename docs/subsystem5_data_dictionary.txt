@@ -1,0 +1,320 @@
+MASON CAREERLAUNCH - SUBSYSTEM 5: COMMUNITY FORUM & DISCUSSION
+DATABASE DATA DICTIONARY (KEY FOR ER DIAGRAM)
+=====================================================================
+
+Legend:
+  PK  = Primary key
+  FK  = Foreign key
+  UK  = Unique
+  Composite PK = two fields together form the primary key
+
+Each entry lists:  field | type | what it is | how it's used
+
+
+---------------------------------------------------------------------
+USER  (owned by Shared Core, read-only for Subsystem 5)
+---------------------------------------------------------------------
+id | uuid, PK
+  What:  Unique ID for every platform user.
+  Use:   Every author, voter, flagger, and moderator field in the forum
+         tables points here. Taken from the validated auth token.
+
+name | string
+  What:  Display name.
+  Use:   Shown next to posts and replies. Fetched through
+         GET /users/{id} instead of being copied into forum tables.
+
+gmu_email | string
+  What:  GMU email address.
+  Use:   Not used directly by the forum. Notifications uses it to
+         email reply alerts.
+
+role | string
+  What:  Student, Mentor, Staff, or Admin.
+  Use:   Decides permissions. Only Staff can pin posts. Only Staff and
+         Admin can see the moderation queue.
+
+
+---------------------------------------------------------------------
+CATEGORY
+---------------------------------------------------------------------
+id | int, PK
+  What:  Category identifier.
+  Use:   Referenced by every post. Used as a filter in
+         GET /posts?category=
+
+name | string, UK
+  What:  Label such as "Interview Prep".
+  Use:   Shown in the UI and the category picker. Unique so admins
+         can't create duplicates.
+
+description | string
+  What:  Short explanation of the category.
+  Use:   Helper text so users post in the right place.
+
+sort_order | int
+  What:  Display position.
+  Use:   Controls the order categories appear in menus.
+
+is_active | boolean
+  What:  Whether the category accepts new posts.
+  Use:   Lets admins retire a category without deleting old posts.
+
+
+---------------------------------------------------------------------
+POST
+---------------------------------------------------------------------
+id | uuid, PK
+  What:  Unique post ID.
+  Use:   Used in every /posts/{id} route.
+
+author_id | uuid, FK -> USER
+  What:  Who wrote the post.
+  Use:   Ownership checks for editing, marking a reply helpful, and
+         building posting history.
+
+category_id | int, FK -> CATEGORY
+  What:  Which category the post is in.
+  Use:   Category filtering and browsing.
+
+title | string
+  What:  Post headline.
+  Use:   Shown in lists. Included in full-text search.
+
+body | text
+  What:  Main content.
+  Use:   Shown on the detail page. Included in full-text search.
+
+vote_score | int
+  What:  Running total of upvotes.
+  Use:   Sorting by votes. Updated in the same transaction as each
+         vote so it doesn't drift.
+
+reply_count | int
+  What:  Number of replies.
+  Use:   Powers the "unanswered" view (reply_count = 0) without
+         counting rows every time.
+
+helpful_reply_id | uuid, FK -> REPLY, nullable
+  What:  The reply the author marked helpful.
+  Use:   Pins that reply to the top of the thread. Null until the
+         author picks one.
+
+is_pinned | boolean
+  What:  Whether staff pinned the post.
+  Use:   Pinned posts sort above everything else in their category.
+
+pinned_by | uuid, FK -> USER
+  What:  Staff member who pinned it.
+  Use:   Accountability. The service must reject this if the user
+         isn't Staff.
+
+status | string
+  What:  "visible" or "removed".
+  Use:   Soft delete. Removed posts disappear from lists but stay in
+         the database for the moderation log.
+
+created_at | timestamp
+  What:  When the post was created.
+  Use:   Sorting by recency.
+
+last_activity_at | timestamp
+  What:  Time of the latest reply or vote.
+  Use:   Powers the "trending" view by surfacing recently active
+         threads.
+
+
+---------------------------------------------------------------------
+REPLY
+---------------------------------------------------------------------
+id | uuid, PK
+  What:  Unique reply ID.
+  Use:   Target for votes, flags, and the helpful mark.
+
+post_id | uuid, FK -> POST
+  What:  Which thread the reply belongs to.
+  Use:   Loading all replies for GET /posts/{id}.
+
+parent_reply_id | uuid, FK -> REPLY, nullable
+  What:  The reply this one answers.
+  Use:   Builds the threaded tree. Null means it's a top-level reply.
+
+author_id | uuid, FK -> USER
+  What:  Who wrote the reply.
+  Use:   Ownership checks and posting history. Also tells
+         Notifications who to skip (no alerts for your own replies).
+
+body | text
+  What:  Reply content.
+  Use:   Shown in the thread.
+
+vote_score | int
+  What:  Running upvote total.
+  Use:   Sorting replies within a thread.
+
+status | string
+  What:  "visible" or "removed".
+  Use:   Same soft-delete behavior as posts.
+
+created_at | timestamp
+  What:  When the reply was posted.
+  Use:   Ordering replies and updating the post's last_activity_at.
+
+
+---------------------------------------------------------------------
+TAG
+---------------------------------------------------------------------
+id | int, PK
+  What:  Tag identifier.
+  Use:   Joined to posts through POST_TAG.
+
+name | string, UK
+  What:  Tag text such as "Capital One" or "SWE intern".
+  Use:   Filtering with GET /posts?tags=  Unique so the same tag
+         isn't stored multiple times.
+
+tag_type | string
+  What:  "employer", "role", or "other".
+  Use:   Lets the UI group tags. Also marks employer-tagged posts as
+         higher moderation risk.
+
+
+---------------------------------------------------------------------
+POST_TAG  (join table)
+---------------------------------------------------------------------
+post_id | uuid, composite PK + FK -> POST
+  What:  The tagged post.
+  Use:   Half of the composite key.
+
+tag_id | int, composite PK + FK -> TAG
+  What:  The tag applied.
+  Use:   Other half. The composite key stops the same tag from being
+         added to a post twice.
+
+
+---------------------------------------------------------------------
+POST_VOTE  and  REPLY_VOTE
+(Both tables work the same way, one for posts and one for replies.)
+---------------------------------------------------------------------
+post_id / reply_id | uuid, composite PK + FK
+  What:  What was voted on.
+  Use:   Half of the composite key.
+
+user_id | uuid, composite PK + FK -> USER
+  What:  Who voted.
+  Use:   Other half. The composite key guarantees one vote per person
+         per item.
+
+value | smallint
+  What:  +1 for an upvote.
+  Use:   Added to the target's vote_score. Stored as a number so
+         downvotes could be added later without a schema change.
+
+created_at | timestamp
+  What:  When the vote happened.
+  Use:   Spotting vote-gaming bursts and feeding Admin analytics.
+
+
+---------------------------------------------------------------------
+FLAG
+---------------------------------------------------------------------
+id | uuid, PK
+  What:  Unique flag ID.
+  Use:   Each item in the moderation queue is one flag.
+
+post_id | uuid, FK -> POST
+  What:  The thread involved.
+  Use:   Always filled in so moderators can see the context.
+
+reply_id | uuid, FK -> REPLY, nullable
+  What:  The specific reply flagged.
+  Use:   Null means the post itself was flagged.
+
+flagged_by | uuid, FK -> USER
+  What:  Who reported it.
+  Use:   Prevents duplicate flags from the same user and helps spot
+         people abusing the flag button.
+
+reason | string
+  What:  Why it was flagged.
+  Use:   Shown to the moderator in the queue.
+
+status | string
+  What:  "open", "actioned", or "dismissed".
+  Use:   GET /moderation/queue returns only open flags.
+
+created_at | timestamp
+  What:  When it was reported.
+  Use:   Sorts the queue oldest first.
+
+
+---------------------------------------------------------------------
+MODERATION_ACTION
+---------------------------------------------------------------------
+id | uuid, PK
+  What:  Unique log entry.
+  Use:   Permanent audit record. Never edited or deleted.
+
+flag_id | uuid, FK -> FLAG
+  What:  The flag being resolved.
+  Use:   Links each decision back to the original report.
+
+moderator_id | uuid, FK -> USER
+  What:  Staff member or admin who acted.
+  Use:   Accountability. The SOW requires moderator ID on every
+         action.
+
+action | string
+  What:  "remove", "warn", or "dismiss".
+  Use:   Drives what happens next. "remove" sets the content's status
+         to removed. All three trigger a "moderation action taken"
+         notification.
+
+reason | string
+  What:  Moderator's explanation.
+  Use:   Required by the SOW. Shown in the Admin dashboard.
+
+created_at | timestamp
+  What:  When the decision was made.
+  Use:   Required timestamp for the audit log. Subsystem 7 reads this.
+
+
+---------------------------------------------------------------------
+FORUM_USER_SETTINGS
+---------------------------------------------------------------------
+user_id | uuid, PK + FK -> USER
+  What:  The user these settings belong to.
+  Use:   One row per user, created the first time they use the forum.
+
+hide_post_history | boolean
+  What:  Whether their posting history is private.
+  Use:   When true, the public profile hides their posts and replies.
+         Their content still shows in threads normally.
+
+reputation | int
+  What:  Score earned from upvotes and helpful marks.
+  Use:   Shown on profiles. Could later be used to limit new
+         accounts, such as requiring some reputation before votes
+         count.
+
+
+---------------------------------------------------------------------
+RELATIONSHIP SUMMARY
+---------------------------------------------------------------------
+USER      1 --- 0..*  POST                (writes)
+USER      1 --- 0..*  REPLY               (writes)
+USER      1 --- 0..1  FORUM_USER_SETTINGS (has)
+USER      1 --- 0..*  POST_VOTE           (casts)
+USER      1 --- 0..*  REPLY_VOTE          (casts)
+USER      1 --- 0..*  FLAG                (submits)
+USER      1 --- 0..*  MODERATION_ACTION   (performs)
+CATEGORY  1 --- 0..*  POST                (contains)
+POST      1 --- 0..*  REPLY               (has)
+REPLY  0..1 --- 0..*  REPLY               (nested under)
+POST      1 --- 0..*  POST_TAG            (tagged)
+TAG       1 --- 0..*  POST_TAG            (labels)
+POST      1 --- 0..*  POST_VOTE           (receives)
+REPLY     1 --- 0..*  REPLY_VOTE          (receives)
+POST      1 --- 0..*  FLAG                (flagged by)
+REPLY  0..1 --- 0..*  FLAG                (flagged by)
+FLAG      1 --- 0..1  MODERATION_ACTION   (resolved by)

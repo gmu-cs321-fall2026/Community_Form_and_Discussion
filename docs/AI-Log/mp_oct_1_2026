@@ -1,0 +1,98 @@
+CS 321 AI PROMPT LOG ENTRY
+Name: Michael Pieterse
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 10/01/2026
+Tool: Claude (Anthropic), claude.ai chat
+Location in repo: /docs/ai-log/[filename]
+
+---------------------------------------------------------------
+1. STORY AND SCOPE
+---------------------------------------------------------------
+Story: As a developer on Subsystem 5, I need a database schema that supports 
+the endpoints and features defined in the SOW, so that we can implement the 
+community forum and discussion functionality.
+
+Specific piece I picked: the Subsystem 5 database schema. Before we
+can build any endpoint (GET /posts, POST /posts, POST /posts/{id}/flag),
+we need the tables those endpoints read and write. Sprint 1 also
+requires our architecture decisions to be documented, and the
+schema is one of them.
+
+---------------------------------------------------------------
+2. ASKED (PROMPTS USED)
+---------------------------------------------------------------
+Prompt 1: "Create a database ER diagram specifically only for the
+subsystem 5" 
+
+Prompt 2: "Create a Key to explain the variables and what they are
+for and how they would be used"
+
+Prompt 3: "put into txt"
+
+---------------------------------------------------------------
+3. PRODUCED
+---------------------------------------------------------------
+- A Mermaid erDiagram with 11 entities: USER (reference only,
+  owned by Shared Core), CATEGORY, POST, REPLY, TAG, POST_TAG,
+  POST_VOTE, REPLY_VOTE, FLAG, MODERATION_ACTION, and
+  FORUM_USER_SETTINGS.
+- An explanation of the design choices: split vote tables with
+  composite keys, a helpful_reply_id on POST, self-referencing
+  replies for threading, soft deletes through a status field,
+  and denormalized counters for the trending and unanswered views.
+- A plain text data dictionary (subsystem5_data_dictionary.txt)
+  listing every field, its type, what it holds, and how it's used.
+
+Html of ER diagram
+subsystem5_data_dictionary.txt
+
+---------------------------------------------------------------
+4. CRITIQUE
+---------------------------------------------------------------
+What was correct and useful:
+- It respected the SOW's architecture rule. USER is only
+  referenced, not redefined, which is exactly what Section 4
+  requires.
+- The composite primary keys on POST_VOTE and REPLY_VOTE enforce
+  one vote per user at the database level. That handles vote
+  gaming without relying on Java code to remember the check.
+- MODERATION_ACTION is append-only with moderator_id, reason,
+  and timestamp. That lines up with the SOW's auditable log
+  requirement and with what Subsystem 7 will need to read.
+
+What I changed and why:
+
+Problems, risks, or things that are wrong:
+- pinned_by is supposed to be Staff only, but nothing in the
+  schema enforces that. It has to be checked in the service layer.
+- FLAG has both post_id and reply_id. Nothing stops a flag from
+  pointing to a reply that belongs to a different post. That
+  needs a check constraint or service validation.
+- value on the vote tables is a smallint with no CHECK
+  constraint, so a bad request could store +50.
+- The denormalized counters (vote_score, reply_count) can drift
+  under concurrent writes unless every update happens in the
+  same transaction as the vote or reply.
+- No ON DELETE behavior or indexes are specified. Search needs a
+  full-text index, and created_at and last_activity_at need
+  indexes for sorting.
+- reputation in FORUM_USER_SETTINGS may overlap with what Shared
+  Core stores. We need to confirm ownership with Subsystem 1.
+- Removed posts don't record who removed them on the row itself.
+  That is only recoverable by joining through MODERATION_ACTION.
+
+Outdated or insecure: nothing outdated. The main security gap is
+that role-based rules (pinning, moderation access) live outside
+the schema and must be enforced in code.
+
+---------------------------------------------------------------
+5. HOW IT WAS TESTED
+---------------------------------------------------------------
+- Confirmed the Mermaid diagram renders without errors.
+- Checked each table against the SOW's Subsystem 5 responsibilities
+  and endpoint list to make sure every feature has a place to
+  store its data.
+- Not yet tested: the schema has not been written as SQL DDL or
+  run against PostgreSQL. Next step is to generate the DDL, run it
+  in our Docker container, and insert sample data to confirm the
+  constraints behave as expected.
