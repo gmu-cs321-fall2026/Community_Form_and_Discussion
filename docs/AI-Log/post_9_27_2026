@@ -1,0 +1,27 @@
+CS 321 AI PROMPT LOG ENTRY
+Name: Reid Buckley
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 9/27/2026
+Tool: Gemini
+
+Asked: Gemini to create poting feature in Java for a community forum and discussion page that will be operated by JavaScript
+Posts should have categories title, and optional tages.
+
+Produced: Gemini produced a Post class that had the desired features of title, body, category, and tages
+
+Changed: Gemini stored the tags in a list which I changed to being stored in a map instead to be more efficient.
+The rest of the code was kept as is. New feature like post id, and creation time were created which were kept
+because they seemed necessary for the overall project.
+
+Asked: Gemini to create JavaScript code to be able to test the post class.
+
+Produced: JavaScript code that was able to test the Post class with the ability to deploy a Java backend with sending through JSON
+
+Rejected: The function to send to backend with JSON was rejected because it was not necessary or helpful at this moment 
+because ability to support it has not been created as of Sprint 1
+
+Asked: Gemini to create an HTML file to test the Java and JavaScript files
+
+Produce: Gemini created an HTML file that utilized the files to be able to see what a test post would look like 
+
+Changes: No changes because it was just a quick test to see if everthing was working as desired
