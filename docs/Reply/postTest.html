@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Forum</title>
+    <style>
+        /* Base page layout styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            padding: 20px;
+        }
+
+        .forum-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Post Creation Card Styling */
+        .create-post-card {
+            background-color: #ffffff;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+        }
+
+        .create-post-card h2 {
+            margin-top: 0;
+            color: #007bff;
+            font-size: 1.25em;
+        }
+
+        .post-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .post-form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .post-form-row input,
+        .post-form-row select {
+            flex: 1;
+        }
+
+        .post-form input,
+        .post-form select,
+        .post-form textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .post-form textarea {
+            resize: vertical;
+            height: 70px;
+        }
+
+        .post-form button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .post-form button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Existing Post Card Styling */
+        .post-card {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .category-badge {
+            background-color: #007bff;
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .post-title {
+            margin: 0 0 10px 0;
+            color: #222;
+        }
+
+        .post-body {
+            color: #444;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        /* Metadata / Tags Styling */
+        .tags-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+            margin-bottom: 15px;
+        }
+
+        .tag-pill {
+            background-color: #eef2f7;
+            color: #334e68;
+            font-size: 0.8em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid #d9e2ec;
+        }
+
+        /* Section wrapper for listing and submitting post replies */
+        .replies-section {
+            border-top: 2px solid #f0f0f0;
+            padding-top: 15px;
+        }
+
+        .replies-section h3 {
+            font-size: 1em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        /* Individual reply item styling */
+        .reply-card {
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+            padding: 10px 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .reply-header {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .reply-body {
+            font-size: 0.9em;
+            color: #333;
+            margin: 0;
+        }
+
+        /* Input form controls for sending a new reply */
+        .reply-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .reply-form input,
+        .reply-form textarea {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .reply-form textarea {
+            resize: vertical;
+            height: 50px;
+        }
+
+        .reply-form button {
+            align-self: flex-end;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .reply-form button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="forum-container">
+        <h1>Community Forum</h1>
+
+        <!-- CREATE NEW POST FORM -->
+        <div class="create-post-card">
+            <h2>Create a New Post</h2>
+            <form id="newPostForm" class="post-form">
+                <div class="post-form-row">
+                    <input type="text" id="postAuthor" placeholder="Your Username" required />
+                    <select id="postCategory" required>
+                        <option value="GENERAL">GENERAL</option>
+                        <option value="CAREER_ADVICE">CAREER_ADVICE</option>
+                        <option value="JOB_BOARD">JOB_BOARD</option>
+                        <option value="TECHNICAL">TECHNICAL</option>
+                        <option value="ANNOUNCEMENT">ANNOUNCEMENT</option>
+                    </select>
+                </div>
+                <input type="text" id="postTitle" placeholder="Post Title (1 - 120 characters)" maxlength="120" required />
+                <textarea id="postBody" placeholder="What's on your mind?" required></textarea>
+                <button type="submit">Create Post</button>
+            </form>
+        </div>
+        
+        <!-- Target container where JavaScript renders posts -->
+        <div id="postsFeed"></div>
+    </div>
+
+    <!-- Link JS file -->
+    <script src="testPost.js"></script>
+</body>
+</html>
