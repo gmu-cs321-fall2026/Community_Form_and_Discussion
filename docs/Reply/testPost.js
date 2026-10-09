@@ -168,6 +168,32 @@ function handleReplySubmit(event, postId) {
     }
 }
 
+// --- NEW POST FORM EVENT LISTENER ---
+
+const newPostForm = document.getElementById('newPostForm');
+
+if (newPostForm) {
+    newPostForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const author = document.getElementById('postAuthor').value;
+        const category = document.getElementById('postCategory').value;
+        const title = document.getElementById('postTitle').value;
+        const body = document.getElementById('postBody').value;
+
+        const newPost = new Post({
+            title: title,
+            body: body,
+            authorId: author,
+            category: category
+        });
+
+        postsMap.set(newPost.id, newPost);
+        renderPostToHTML(newPost);
+        newPostForm.reset();
+    });
+}
+
 // --- INITIAL DEMO SETUP & EXECUTION ---
 
 const post1 = new Post({
