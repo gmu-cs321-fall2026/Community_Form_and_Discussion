@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Community Forum</title>
+<style>
+  body{font-family:sans-serif; max-width:800px; margin:2rem auto; padding:0 1rem;}
+  .tabs{display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.5rem;}
+  .tab-button{padding:.5rem 1rem; border:1px solid #ccc; border-radius:20px; background:#fff; cursor:pointer;}
+  .tab-button.active{background:#3b5bdb; color:#fff; border-color:#3b5bdb;}
+  .post-card{border:1px solid #e0e0e0; border-radius:8px; padding:1rem; margin-bottom:1rem;}
+  .post-card h3{margin:0 0 .5rem;}
+</style>
+</head>
+<body>
+
+<h1>Community Forum</h1>
+
+<!-- Each button's data-category must exactly match a Category enum name -->
+<nav class="tabs">
+  <button class="tab-button active" data-category="GENERAL">General</button>
+  <button class="tab-button" data-category="CAREER_ADVICE">Career Advice</button>
+  <button class="tab-button" data-category="JOB_BOARD">Job Board</button>
+  <button class="tab-button" data-category="TECHNICAL">Technical</button>
+  <button class="tab-button" data-category="ANNOUNCEMENT">Announcement</button>
+</nav>
+
+<!-- Posts will be injected here by JS once Step 3 is wired up -->
+<main id="post-list">
+  <p>Select a category to see posts.</p>
+</main>
+
+<script>
+  // Tab click logic only — no fetching yet, that comes in Step 3
+  document.querySelectorAll(".tab-button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      console.log("Selected category:", btn.dataset.category);
+      // loadPosts(btn.dataset.category) will go here in Step 3
+    });
+  });
+</script>
+
+</body>
+</html>
