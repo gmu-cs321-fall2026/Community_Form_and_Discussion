@@ -1,0 +1,12 @@
+CS 321 AI PROMPT LOG ENTRY
+Name: Reid Buckley
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 10/8/2026
+Tool: Gemini
+
+Asked: Gemini to create a reply feature that works with the already existing post feature
+
+Produced: A change to the ForumPost java file that included a Reply class that is aple to be added on to posts
+
+Changed: At the moment all classes ForumPost, Post, and Reply are all in one file this will eventually be seperated into individual files 
+to increase maintanability and accessability
