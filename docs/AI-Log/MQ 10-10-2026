@@ -1,0 +1,15 @@
+CS 321 AI Prompt Log Entry 2
+Saad Rai
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 10/10/2026
+Tool: ChatGPT
+
+Continuing from Prompt Log Entry 1, I asked ChatGPT to make this into a fully functioning webpage.
+
+Asked: I want to make it into a functioning webpage for staff admins to easily open 
+and click buttons that do said actions
+
+Produced: With the code developed before, it added a html file and added to the exisiting coding file 
+that demonstrated a test demo into a real working webpage.
+
+Changed: I made sure it included a readme file via chatgpt to explain how the demo webpage works and sorted the files to make it easier to browse through
