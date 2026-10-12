@@ -1,0 +1,15 @@
+CS 321 AI Prompt Log Entry 1
+Saad Rai
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 9/24/2026
+Tool: ChatGPT
+
+Asked: this is my user story for a sprint im working on: As a platform admin, I want a moderation queue that is accessible to flagged items so that I can use an array of actions like remove/warn/dismiss for posts or replies.
+1.	A moderation queue that requires posts that are flagged for review
+2.	A list of action buttons such as dismiss or remove posts for moderators
+3.	Each moderation decision should be logged in with a brief reason why action was taken. the specific function i want to make is the moderation queue that shows posts that are flagged for review and an array of options like dismiss flag, remove post, some action buttons, and a brief reason field to be turned into code and is testable in a small closed off environment for especially the action buttons. These are some of the key interfaces for this function 1. POST /posts/{id}/flag, flag for moderation 2. GET /moderation/queue — moderation queue (Career Services Staff and Admin only)
+Asked it to make a folder with the code to test in a closed test environment and how to test it.
+
+Produced: It gave me the code first hand but not a folder containing the code and a test file to run it. I later asked AI to compose a folder with the code and include a test file to verify for myself if it works and is usable.
+
+Changed: I entirely threw out the testing folder that AI gave me first hand as it just wasn't recognizing the test file and asked it to remake it and include the test file in the same file instead of a separate file in the folder. Also the test was easier to understand as it gave options and used test examples to run the code and see how moderation works.
