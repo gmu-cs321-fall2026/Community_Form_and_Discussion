@@ -1,468 +1,733 @@
 /* =====================================================================
-   Mason CareerLaunch - Subsystem 5: Community Forum & Discussion
-   Oracle schema built from the Subsystem 5 ER diagram
+Mason CareerLaunch - Subsystem 5: Community Forum & Discussion
+Oracle schema built from the Subsystem 5 ER diagram
 
-   Target : Oracle Database 19c / 21c XE / 23ai, run in Oracle SQL Developer
-   How    : Open in a worksheet and press F5 (Run Script), not Ctrl+Enter.
-            The "/" lines end PL/SQL blocks and only work in script mode.
+Target : Oracle Database 19c / 21c XE / 23ai, run in Oracle SQL Developer
+How    : Open in a worksheet and press F5 (Run Script), not Ctrl+Enter.
+The "/" lines end PL/SQL blocks and only work in script mode.
 
-   Sections
-     0. Clean slate (safe to re-run)
-     1. APP_USER stand-in for the Shared Core user table
-     2. Forum tables
-     3. Constraints added after both sides exist (circular FKs)
-     4. Indexes
-     5. Application-layer rules (what the Java code must enforce)
-     6. Views (unanswered, trending, moderation queue)
-     7. Seed data (the six categories from the SOW)
-     8. Sample data + smoke test queries (optional, delete for real use)
+Sections
+0. Clean slate (safe to re-run)
+1. APP_USER stand-in for the Shared Core user table
+2. Forum tables
+3. Constraints added after both sides exist (circular FKs)
+4. Indexes
+5. Application-layer rules (what the Java code must enforce)
+6. Views (unanswered, trending, moderation queue)
+7. Seed data (the six categories from the SOW)
+8. Sample data + smoke test queries (optional, delete for real use)
 
-   No triggers. The database enforces structure (keys, checks, FKs).
-   All behavior, like updating counters and resolving flags, lives in
-   the Java service layer. Section 5 lists exactly what that layer owns.
+No triggers. The database enforces structure (keys, checks, FKs).
+All behavior, like updating counters and resolving flags, lives in
+the Java service layer. Section 5 lists exactly what that layer owns.
 
-   Oracle-specific choices
-     - USER is a reserved word in Oracle, so the user table is APP_USER.
-     - UUIDs are VARCHAR2(36) in standard 8-4-4-4-12 form so they match
-       java.util.UUID.toString() with no conversion code in the JDBC layer.
-     - Booleans are NUMBER(1) with a 0/1 check. That works on every version.
-       (23ai has a native BOOLEAN type if your instance supports it.)
-     - Small lookup tables use IDENTITY columns (Oracle 12c and later).
-     - Long text uses CLOB.
-   ===================================================================== */
-
-
+Oracle-specific choices
+- USER is a reserved word in Oracle, so the user table is APP_USER.
+- UUIDs are VARCHAR2(36) in standard 8-4-4-4-12 form so they match
+java.util.UUID.toString() with no conversion code in the JDBC layer.
+- Booleans are NUMBER(1) with a 0/1 check. That works on every version.
+(23ai has a native BOOLEAN type if your instance supports it.)
+- Small lookup tables use IDENTITY columns (Oracle 12c and later).
+- Long text uses CLOB.
+===================================================================== */
 /* =====================================================================
-   0. CLEAN SLATE
-   ===================================================================== */
-BEGIN
-  FOR t IN (
-    SELECT table_name FROM user_tables
-    WHERE table_name IN (
-      'MODERATION_ACTION','FLAG','REPLY_VOTE','POST_VOTE','POST_TAG',
-      'TAG','FORUM_USER_SETTINGS','REPLY','POST','CATEGORY','APP_USER')
-  ) LOOP
-    EXECUTE IMMEDIATE 'DROP TABLE ' || t.table_name || ' CASCADE CONSTRAINTS PURGE';
-  END LOOP;
+0. CLEAN SLATE
+===================================================================== */
+BEGIN FOR t IN (
+  SELECT
+    table_name
+  FROM
+    user_tables
+  WHERE
+    table_name IN (
+      'MODERATION_ACTION',
+      'FLAG',
+      'REPLY_VOTE',
+      'POST_VOTE',
+      'POST_TAG',
+      'TAG',
+      'FORUM_USER_SETTINGS',
+      'REPLY',
+      'POST',
+      'CATEGORY',
+      'APP_USER'
+    )
+) LOOP EXECUTE IMMEDIATE 'DROP TABLE ' || t.table_name || ' CASCADE CONSTRAINTS PURGE';
+
+END LOOP;
+
 END;
+
 /
-
+/* =====================================================================
+1. APP_USER  (owned by Shared Core)
+This is only a local stand-in so the foreign keys have something to
+point at. In the integrated build, Shared Core owns this table and
+your team does not change it.
+===================================================================== */
+CREATE TABLE
+  app_user (
+    id VARCHAR2 (36) DEFAULT LOWER(
+      REGEXP_REPLACE (
+        RAWTOHEX (SYS_GUID ()),
+        '(.{8})(.{4})(.{4})(.{4})(.{12})',
+        '\1-\2-\3-\4-\5'
+      )
+    ) CONSTRAINT pk_app_user PRIMARY KEY,
+    name VARCHAR2 (120) NOT NULL,
+    gmu_email VARCHAR2 (254) NOT NULL CONSTRAINT uq_app_user_email UNIQUE,
+    role VARCHAR2 (10) NOT NULL CONSTRAINT ck_app_user_role CHECK (role IN ('STUDENT', 'MENTOR', 'STAFF', 'ADMIN'))
+  );
 
 /* =====================================================================
-   1. APP_USER  (owned by Shared Core)
-   This is only a local stand-in so the foreign keys have something to
-   point at. In the integrated build, Shared Core owns this table and
-   your team does not change it.
-   ===================================================================== */
-CREATE TABLE app_user (
-  id          VARCHAR2(36)   DEFAULT LOWER(REGEXP_REPLACE(RAWTOHEX(SYS_GUID()),
-                               '(.{8})(.{4})(.{4})(.{4})(.{12})', '\1-\2-\3-\4-\5'))
-                             CONSTRAINT pk_app_user PRIMARY KEY,
-  name        VARCHAR2(120)  NOT NULL,
-  gmu_email   VARCHAR2(254)  NOT NULL CONSTRAINT uq_app_user_email UNIQUE,
-  role        VARCHAR2(10)   NOT NULL
-              CONSTRAINT ck_app_user_role CHECK (role IN ('STUDENT','MENTOR','STAFF','ADMIN'))
-);
-
-
-/* =====================================================================
-   2. FORUM TABLES
-   ===================================================================== */
-
+2. FORUM TABLES
+===================================================================== */
 -- CATEGORY: fixed list managed by admins. Users post into these but
 -- cannot create new ones.
-CREATE TABLE category (
-  id           NUMBER GENERATED BY DEFAULT AS IDENTITY CONSTRAINT pk_category PRIMARY KEY,
-  name         VARCHAR2(60)   NOT NULL CONSTRAINT uq_category_name UNIQUE,
-  description  VARCHAR2(400),
-  sort_order   NUMBER(4)      DEFAULT 0 NOT NULL,
-  is_active    NUMBER(1)      DEFAULT 1 NOT NULL
-               CONSTRAINT ck_category_active CHECK (is_active IN (0,1))
-);
+CREATE TABLE
+  category (
+    id NUMBER GENERATED BY DEFAULT AS IDENTITY CONSTRAINT pk_category PRIMARY KEY,
+    name VARCHAR2 (60) NOT NULL CONSTRAINT uq_category_name UNIQUE,
+    description VARCHAR2 (400),
+    sort_order NUMBER (4) DEFAULT 0 NOT NULL,
+    is_active NUMBER (1) DEFAULT 1 NOT NULL CONSTRAINT ck_category_active CHECK (is_active IN (0, 1))
+  );
 
 -- POST: top-level thread. vote_score, reply_count and last_activity_at
 -- are denormalized counters. The Java layer updates them (see section 5).
-CREATE TABLE post (
-  id                VARCHAR2(36)  DEFAULT LOWER(REGEXP_REPLACE(RAWTOHEX(SYS_GUID()),
-                                    '(.{8})(.{4})(.{4})(.{4})(.{12})', '\1-\2-\3-\4-\5'))
-                                  CONSTRAINT pk_post PRIMARY KEY,
-  author_id         VARCHAR2(36)  NOT NULL
-                    CONSTRAINT fk_post_author REFERENCES app_user(id),
-  category_id       NUMBER        NOT NULL
-                    CONSTRAINT fk_post_category REFERENCES category(id),
-  title             VARCHAR2(200) NOT NULL,
-  body              CLOB          NOT NULL,
-  vote_score        NUMBER(10)    DEFAULT 0 NOT NULL,
-  reply_count       NUMBER(10)    DEFAULT 0 NOT NULL,
-  helpful_reply_id  VARCHAR2(36),                    -- FK added in section 3
-  is_pinned         NUMBER(1)     DEFAULT 0 NOT NULL
-                    CONSTRAINT ck_post_pinned CHECK (is_pinned IN (0,1)),
-  pinned_by         VARCHAR2(36)
-                    CONSTRAINT fk_post_pinned_by REFERENCES app_user(id),
-  status            VARCHAR2(10)  DEFAULT 'visible' NOT NULL
-                    CONSTRAINT ck_post_status CHECK (status IN ('visible','removed')),
-  created_at        TIMESTAMP     DEFAULT SYSTIMESTAMP NOT NULL,
-  last_activity_at  TIMESTAMP     DEFAULT SYSTIMESTAMP NOT NULL,
-  -- A pinned post must record who pinned it. An unpinned post must not.
-  -- Whether that person is STAFF is checked in the API through Shared Core RBAC.
-  CONSTRAINT ck_post_pin_pair CHECK (
-    (is_pinned = 0 AND pinned_by IS NULL) OR
-    (is_pinned = 1 AND pinned_by IS NOT NULL)),
-  CONSTRAINT ck_post_counts CHECK (vote_score >= 0 AND reply_count >= 0)
-);
+CREATE TABLE
+  post (
+    id VARCHAR2 (36) DEFAULT LOWER(
+      REGEXP_REPLACE (
+        RAWTOHEX (SYS_GUID ()),
+        '(.{8})(.{4})(.{4})(.{4})(.{12})',
+        '\1-\2-\3-\4-\5'
+      )
+    ) CONSTRAINT pk_post PRIMARY KEY,
+    author_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_post_author REFERENCES app_user (id),
+    category_id NUMBER NOT NULL CONSTRAINT fk_post_category REFERENCES category (id),
+    title VARCHAR2 (200) NOT NULL,
+    body CLOB NOT NULL,
+    vote_score NUMBER (10) DEFAULT 0 NOT NULL,
+    reply_count NUMBER (10) DEFAULT 0 NOT NULL,
+    helpful_reply_id VARCHAR2 (36), -- FK added in section 3
+    is_pinned NUMBER (1) DEFAULT 0 NOT NULL CONSTRAINT ck_post_pinned CHECK (is_pinned IN (0, 1)),
+    pinned_by VARCHAR2 (36) CONSTRAINT fk_post_pinned_by REFERENCES app_user (id),
+    status VARCHAR2 (10) DEFAULT 'visible' NOT NULL CONSTRAINT ck_post_status CHECK (status IN ('visible', 'removed')),
+    created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+    last_activity_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+    -- A pinned post must record who pinned it. An unpinned post must not.
+    -- Whether that person is STAFF is checked in the API through Shared Core RBAC.
+    CONSTRAINT ck_post_pin_pair CHECK (
+      (
+        is_pinned = 0
+        AND pinned_by IS NULL
+      )
+      OR (
+        is_pinned = 1
+        AND pinned_by IS NOT NULL
+      )
+    ),
+    CONSTRAINT ck_post_counts CHECK (
+      vote_score >= 0
+      AND reply_count >= 0
+    )
+  );
 
 -- REPLY: threaded under a post, optionally nested under another reply.
-CREATE TABLE reply (
-  id               VARCHAR2(36)  DEFAULT LOWER(REGEXP_REPLACE(RAWTOHEX(SYS_GUID()),
-                                   '(.{8})(.{4})(.{4})(.{4})(.{12})', '\1-\2-\3-\4-\5'))
-                                 CONSTRAINT pk_reply PRIMARY KEY,
-  post_id          VARCHAR2(36)  NOT NULL
-                   CONSTRAINT fk_reply_post REFERENCES post(id) ON DELETE CASCADE,
-  parent_reply_id  VARCHAR2(36),                     -- FK added below
-  author_id        VARCHAR2(36)  NOT NULL
-                   CONSTRAINT fk_reply_author REFERENCES app_user(id),
-  body             CLOB          NOT NULL,
-  vote_score       NUMBER(10)    DEFAULT 0 NOT NULL
-                   CONSTRAINT ck_reply_score CHECK (vote_score >= 0),
-  status           VARCHAR2(10)  DEFAULT 'visible' NOT NULL
-                   CONSTRAINT ck_reply_status CHECK (status IN ('visible','removed')),
-  created_at       TIMESTAMP     DEFAULT SYSTIMESTAMP NOT NULL,
-  -- (id, post_id) pair lets other tables prove a reply belongs to a given post
-  CONSTRAINT uq_reply_id_post UNIQUE (id, post_id),
-  -- A nested reply must sit under a parent in the SAME post
-  CONSTRAINT fk_reply_parent FOREIGN KEY (parent_reply_id, post_id)
-    REFERENCES reply(id, post_id) ON DELETE CASCADE,
-  CONSTRAINT ck_reply_not_own_parent CHECK (parent_reply_id IS NULL OR parent_reply_id <> id)
-);
+CREATE TABLE
+  reply (
+    id VARCHAR2 (36) DEFAULT LOWER(
+      REGEXP_REPLACE (
+        RAWTOHEX (SYS_GUID ()),
+        '(.{8})(.{4})(.{4})(.{4})(.{12})',
+        '\1-\2-\3-\4-\5'
+      )
+    ) CONSTRAINT pk_reply PRIMARY KEY,
+    post_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_reply_post REFERENCES post (id) ON DELETE CASCADE,
+    parent_reply_id VARCHAR2 (36), -- FK added below
+    author_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_reply_author REFERENCES app_user (id),
+    body CLOB NOT NULL,
+    vote_score NUMBER (10) DEFAULT 0 NOT NULL CONSTRAINT ck_reply_score CHECK (vote_score >= 0),
+    status VARCHAR2 (10) DEFAULT 'visible' NOT NULL CONSTRAINT ck_reply_status CHECK (status IN ('visible', 'removed')),
+    created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+    -- (id, post_id) pair lets other tables prove a reply belongs to a given post
+    CONSTRAINT uq_reply_id_post UNIQUE (id, post_id),
+    -- A nested reply must sit under a parent in the SAME post
+    CONSTRAINT fk_reply_parent FOREIGN KEY (parent_reply_id, post_id) REFERENCES reply (id, post_id) ON DELETE CASCADE,
+    CONSTRAINT ck_reply_not_own_parent CHECK (
+      parent_reply_id IS NULL
+      OR parent_reply_id <> id
+    )
+  );
 
 -- TAG: optional labels such as an employer or role name.
-CREATE TABLE tag (
-  id        NUMBER GENERATED BY DEFAULT AS IDENTITY CONSTRAINT pk_tag PRIMARY KEY,
-  name      VARCHAR2(80)  NOT NULL CONSTRAINT uq_tag_name UNIQUE,
-  tag_type  VARCHAR2(10)  DEFAULT 'other' NOT NULL
-            CONSTRAINT ck_tag_type CHECK (tag_type IN ('employer','role','other'))
-);
+CREATE TABLE
+  tag (
+    id NUMBER GENERATED BY DEFAULT AS IDENTITY CONSTRAINT pk_tag PRIMARY KEY,
+    name VARCHAR2 (80) NOT NULL CONSTRAINT uq_tag_name UNIQUE,
+    tag_type VARCHAR2 (10) DEFAULT 'other' NOT NULL CONSTRAINT ck_tag_type CHECK (tag_type IN ('employer', 'role', 'other'))
+  );
 
 -- POST_TAG: many-to-many bridge between POST and TAG.
-CREATE TABLE post_tag (
-  post_id  VARCHAR2(36) NOT NULL CONSTRAINT fk_post_tag_post REFERENCES post(id) ON DELETE CASCADE,
-  tag_id   NUMBER       NOT NULL CONSTRAINT fk_post_tag_tag  REFERENCES tag(id)  ON DELETE CASCADE,
-  CONSTRAINT pk_post_tag PRIMARY KEY (post_id, tag_id)
-);
+CREATE TABLE
+  post_tag (
+    post_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_post_tag_post REFERENCES post (id) ON DELETE CASCADE,
+    tag_id NUMBER NOT NULL CONSTRAINT fk_post_tag_tag REFERENCES tag (id) ON DELETE CASCADE,
+    CONSTRAINT pk_post_tag PRIMARY KEY (post_id, tag_id)
+  );
 
 -- POST_VOTE: composite PK means one vote per user per post.
-CREATE TABLE post_vote (
-  post_id     VARCHAR2(36) NOT NULL CONSTRAINT fk_post_vote_post REFERENCES post(id) ON DELETE CASCADE,
-  user_id     VARCHAR2(36) NOT NULL CONSTRAINT fk_post_vote_user REFERENCES app_user(id),
-  vote_value  NUMBER(1)    DEFAULT 1 NOT NULL
-              CONSTRAINT ck_post_vote_value CHECK (vote_value = 1),   -- upvote only, per SOW
-  created_at  TIMESTAMP    DEFAULT SYSTIMESTAMP NOT NULL,
-  CONSTRAINT pk_post_vote PRIMARY KEY (post_id, user_id)
-);
+CREATE TABLE
+  post_vote (
+    post_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_post_vote_post REFERENCES post (id) ON DELETE CASCADE,
+    user_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_post_vote_user REFERENCES app_user (id),
+    vote_value NUMBER (1) DEFAULT 1 NOT NULL CONSTRAINT ck_post_vote_value CHECK (vote_value = 1), -- upvote only, per SOW
+    created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_post_vote PRIMARY KEY (post_id, user_id)
+  );
 
 -- REPLY_VOTE: same idea for replies.
-CREATE TABLE reply_vote (
-  reply_id    VARCHAR2(36) NOT NULL CONSTRAINT fk_reply_vote_reply REFERENCES reply(id) ON DELETE CASCADE,
-  user_id     VARCHAR2(36) NOT NULL CONSTRAINT fk_reply_vote_user  REFERENCES app_user(id),
-  vote_value  NUMBER(1)    DEFAULT 1 NOT NULL
-              CONSTRAINT ck_reply_vote_value CHECK (vote_value = 1),
-  created_at  TIMESTAMP    DEFAULT SYSTIMESTAMP NOT NULL,
-  CONSTRAINT pk_reply_vote PRIMARY KEY (reply_id, user_id)
-);
+CREATE TABLE
+  reply_vote (
+    reply_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_reply_vote_reply REFERENCES reply (id) ON DELETE CASCADE,
+    user_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_reply_vote_user REFERENCES app_user (id),
+    vote_value NUMBER (1) DEFAULT 1 NOT NULL CONSTRAINT ck_reply_vote_value CHECK (vote_value = 1),
+    created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_reply_vote PRIMARY KEY (reply_id, user_id)
+  );
 
 -- FLAG: a user reports a post, or a specific reply inside a post.
-CREATE TABLE flag (
-  id          VARCHAR2(36)  DEFAULT LOWER(REGEXP_REPLACE(RAWTOHEX(SYS_GUID()),
-                              '(.{8})(.{4})(.{4})(.{4})(.{12})', '\1-\2-\3-\4-\5'))
-                            CONSTRAINT pk_flag PRIMARY KEY,
-  post_id     VARCHAR2(36)  NOT NULL CONSTRAINT fk_flag_post REFERENCES post(id) ON DELETE CASCADE,
-  reply_id    VARCHAR2(36),
-  flagged_by  VARCHAR2(36)  NOT NULL CONSTRAINT fk_flag_user REFERENCES app_user(id),
-  reason      VARCHAR2(500) NOT NULL,
-  status      VARCHAR2(10)  DEFAULT 'open' NOT NULL
-              CONSTRAINT ck_flag_status CHECK (status IN ('open','actioned','dismissed')),
-  created_at  TIMESTAMP     DEFAULT SYSTIMESTAMP NOT NULL,
-  -- If a reply is flagged, it must belong to the post on the same row
-  CONSTRAINT fk_flag_reply FOREIGN KEY (reply_id, post_id)
-    REFERENCES reply(id, post_id) ON DELETE CASCADE
-);
+CREATE TABLE
+  flag (
+    id VARCHAR2 (36) DEFAULT LOWER(
+      REGEXP_REPLACE (
+        RAWTOHEX (SYS_GUID ()),
+        '(.{8})(.{4})(.{4})(.{4})(.{12})',
+        '\1-\2-\3-\4-\5'
+      )
+    ) CONSTRAINT pk_flag PRIMARY KEY,
+    post_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_flag_post REFERENCES post (id) ON DELETE CASCADE,
+    reply_id VARCHAR2 (36),
+    flagged_by VARCHAR2 (36) NOT NULL CONSTRAINT fk_flag_user REFERENCES app_user (id),
+    reason VARCHAR2 (500) NOT NULL,
+    status VARCHAR2 (10) DEFAULT 'open' NOT NULL CONSTRAINT ck_flag_status CHECK (status IN ('open', 'actioned', 'dismissed')),
+    created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+    -- If a reply is flagged, it must belong to the post on the same row
+    CONSTRAINT fk_flag_reply FOREIGN KEY (reply_id, post_id) REFERENCES reply (id, post_id) ON DELETE CASCADE
+  );
 
 -- MODERATION_ACTION: at most one resolving action per flag (UNIQUE flag_id).
-CREATE TABLE moderation_action (
-  id            VARCHAR2(36)  DEFAULT LOWER(REGEXP_REPLACE(RAWTOHEX(SYS_GUID()),
-                                '(.{8})(.{4})(.{4})(.{4})(.{12})', '\1-\2-\3-\4-\5'))
-                              CONSTRAINT pk_moderation_action PRIMARY KEY,
-  flag_id       VARCHAR2(36)  NOT NULL
-                CONSTRAINT fk_mod_flag REFERENCES flag(id)
-                CONSTRAINT uq_mod_flag UNIQUE,
-  moderator_id  VARCHAR2(36)  NOT NULL CONSTRAINT fk_mod_user REFERENCES app_user(id),
-  action        VARCHAR2(10)  NOT NULL
-                CONSTRAINT ck_mod_action CHECK (action IN ('remove','warn','dismiss')),
-  reason        VARCHAR2(500) NOT NULL,
-  created_at    TIMESTAMP     DEFAULT SYSTIMESTAMP NOT NULL
-);
+CREATE TABLE
+  moderation_action (
+    id VARCHAR2 (36) DEFAULT LOWER(
+      REGEXP_REPLACE (
+        RAWTOHEX (SYS_GUID ()),
+        '(.{8})(.{4})(.{4})(.{4})(.{12})',
+        '\1-\2-\3-\4-\5'
+      )
+    ) CONSTRAINT pk_moderation_action PRIMARY KEY,
+    flag_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_mod_flag REFERENCES flag (id) CONSTRAINT uq_mod_flag UNIQUE,
+    moderator_id VARCHAR2 (36) NOT NULL CONSTRAINT fk_mod_user REFERENCES app_user (id),
+    action VARCHAR2 (10) NOT NULL CONSTRAINT ck_mod_action CHECK (action IN ('remove', 'warn', 'dismiss')),
+    reason VARCHAR2 (500) NOT NULL,
+    created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL
+  );
 
 -- FORUM_USER_SETTINGS: forum-only per-user data, 1-to-0..1 with APP_USER.
-CREATE TABLE forum_user_settings (
-  user_id            VARCHAR2(36) CONSTRAINT pk_forum_user_settings PRIMARY KEY
-                     CONSTRAINT fk_fus_user REFERENCES app_user(id) ON DELETE CASCADE,
-  hide_post_history  NUMBER(1)  DEFAULT 0 NOT NULL
-                     CONSTRAINT ck_fus_hide CHECK (hide_post_history IN (0,1)),
-  reputation         NUMBER(10) DEFAULT 0 NOT NULL
-);
-
+CREATE TABLE
+  forum_user_settings (
+    user_id VARCHAR2 (36) CONSTRAINT pk_forum_user_settings PRIMARY KEY CONSTRAINT fk_fus_user REFERENCES app_user (id) ON DELETE CASCADE,
+    hide_post_history NUMBER (1) DEFAULT 0 NOT NULL CONSTRAINT ck_fus_hide CHECK (hide_post_history IN (0, 1)),
+    reputation NUMBER (10) DEFAULT 0 NOT NULL
+  );
 
 /* =====================================================================
-   3. CONSTRAINTS THAT NEED BOTH TABLES TO EXIST
-   POST -> REPLY (helpful reply) is circular with REPLY -> POST.
-   The composite key forces the helpful reply to be a reply ON THIS POST.
-   Oracle skips the check when helpful_reply_id is NULL, so "no helpful
-   reply yet" is allowed.
-   ===================================================================== */
-ALTER TABLE post ADD CONSTRAINT fk_post_helpful_reply
-  FOREIGN KEY (helpful_reply_id, id) REFERENCES reply(id, post_id);
-
+3. CONSTRAINTS THAT NEED BOTH TABLES TO EXIST
+POST -> REPLY (helpful reply) is circular with REPLY -> POST.
+The composite key forces the helpful reply to be a reply ON THIS POST.
+Oracle skips the check when helpful_reply_id is NULL, so "no helpful
+reply yet" is allowed.
+===================================================================== */
+ALTER TABLE post ADD CONSTRAINT fk_post_helpful_reply FOREIGN KEY (helpful_reply_id, id) REFERENCES reply (id, post_id);
 
 /* =====================================================================
-   4. INDEXES
-   Oracle does not index foreign keys automatically, so add the ones the
-   API actually filters or joins on.
-   ===================================================================== */
+4. INDEXES
+Oracle does not index foreign keys automatically, so add the ones the
+API actually filters or joins on.
+===================================================================== */
 CREATE INDEX ix_post_category_activity ON post (category_id, status, last_activity_at);
-CREATE INDEX ix_post_author            ON post (author_id);
-CREATE INDEX ix_post_unanswered        ON post (status, reply_count, created_at);
-CREATE INDEX ix_reply_post             ON reply (post_id, created_at);
-CREATE INDEX ix_reply_author           ON reply (author_id);
-CREATE INDEX ix_reply_parent           ON reply (parent_reply_id, post_id);
-CREATE INDEX ix_post_tag_tag           ON post_tag (tag_id);
-CREATE INDEX ix_post_vote_user         ON post_vote (user_id);
-CREATE INDEX ix_reply_vote_user        ON reply_vote (user_id);
-CREATE INDEX ix_flag_status            ON flag (status, created_at);
-CREATE INDEX ix_flag_post_reply        ON flag (reply_id, post_id);
+
+CREATE INDEX ix_post_author ON post (author_id);
+
+CREATE INDEX ix_post_unanswered ON post (status, reply_count, created_at);
+
+CREATE INDEX ix_reply_post ON reply (post_id, created_at);
+
+CREATE INDEX ix_reply_author ON reply (author_id);
+
+CREATE INDEX ix_reply_parent ON reply (parent_reply_id, post_id);
+
+CREATE INDEX ix_post_tag_tag ON post_tag (tag_id);
+
+CREATE INDEX ix_post_vote_user ON post_vote (user_id);
+
+CREATE INDEX ix_reply_vote_user ON reply_vote (user_id);
+
+CREATE INDEX ix_flag_status ON flag (status, created_at);
+
+CREATE INDEX ix_flag_post_reply ON flag (reply_id, post_id);
 
 /* Optional full-text search with Oracle Text.
-   Needs the CTXAPP role (ask your DBA or run as a user that has it).
-   Without it, the API can fall back to UPPER(title) LIKE UPPER('%term%').
+Needs the CTXAPP role (ask your DBA or run as a user that has it).
+Without it, the API can fall back to UPPER(title) LIKE UPPER('%term%').
 
 BEGIN
-  CTX_DDL.CREATE_PREFERENCE('post_text_ds', 'MULTI_COLUMN_DATASTORE');
-  CTX_DDL.SET_ATTRIBUTE('post_text_ds', 'COLUMNS', 'title, body');
+CTX_DDL.CREATE_PREFERENCE('post_text_ds', 'MULTI_COLUMN_DATASTORE');
+CTX_DDL.SET_ATTRIBUTE('post_text_ds', 'COLUMNS', 'title, body');
 END;
 /
 CREATE INDEX ix_post_fulltext ON post (title)
-  INDEXTYPE IS CTXSYS.CONTEXT
-  PARAMETERS ('DATASTORE post_text_ds SYNC (ON COMMIT)');
+INDEXTYPE IS CTXSYS.CONTEXT
+PARAMETERS ('DATASTORE post_text_ds SYNC (ON COMMIT)');
 
 -- Query example:
 -- SELECT id, title, SCORE(1) FROM post
 -- WHERE CONTAINS(title, 'amazon AND interview', 1) > 0 ORDER BY SCORE(1) DESC;
-*/
-
-
+ */
 /* =====================================================================
-   5. APPLICATION-LAYER RULES
-   The database no longer does these. Each one must run in the SAME
-   transaction as the write that causes it, or the data drifts when two
-   users act at once. Use UPDATE ... SET x = x + 1 (not read, add, write).
+5. APPLICATION-LAYER RULES
+The database no longer does these. Each one must run in the SAME
+transaction as the write that causes it, or the data drifts when two
+users act at once. Use UPDATE ... SET x = x + 1 (not read, add, write).
 
-   On create reply:
-     UPDATE post SET reply_count = reply_count + 1,
-                     last_activity_at = SYSTIMESTAMP WHERE id = :post_id;
+On create reply:
+UPDATE post SET reply_count = reply_count + 1,
+last_activity_at = SYSTIMESTAMP WHERE id = :post_id;
 
-   On reply removed / restored by moderation:
-     UPDATE post SET reply_count = reply_count - 1 (or + 1) WHERE id = :post_id;
+On reply removed / restored by moderation:
+UPDATE post SET reply_count = reply_count - 1 (or + 1) WHERE id = :post_id;
 
-   On upvote post / remove upvote:
-     Reject if the voter is the post author.
-     INSERT/DELETE post_vote, then
-     UPDATE post SET vote_score = vote_score + 1 (or - 1) WHERE id = :post_id;
+On upvote post / remove upvote:
+Reject if the voter is the post author.
+INSERT/DELETE post_vote, then
+UPDATE post SET vote_score = vote_score + 1 (or - 1) WHERE id = :post_id;
 
-   On upvote reply / remove upvote:
-     Same pattern against reply_vote and reply.vote_score.
+On upvote reply / remove upvote:
+Same pattern against reply_vote and reply.vote_score.
 
-   On moderation action:
-     Reject unless flag.status = 'open'.
-     INSERT moderation_action, then
-     UPDATE flag SET status = 'dismissed' (action = dismiss) or 'actioned';
-     If action = 'remove': set status = 'removed' on the flagged reply,
-     or on the post if the flag has no reply_id.
+On moderation action:
+Reject unless flag.status = 'open'.
+INSERT moderation_action, then
+UPDATE flag SET status = 'dismissed' (action = dismiss) or 'actioned';
+If action = 'remove': set status = 'removed' on the flagged reply,
+or on the post if the flag has no reply_id.
 
-   Still enforced by the database (no Java needed):
-     one vote per user per item, helpful reply must be on the same post,
-     nested reply must be in the same post, pinned posts record pinned_by,
-     one moderation action per flag, valid status/role/tag values.
-   ===================================================================== */
-
-
+Still enforced by the database (no Java needed):
+one vote per user per item, helpful reply must be on the same post,
+nested reply must be in the same post, pinned posts record pinned_by,
+one moderation action per flag, valid status/role/tag values.
+===================================================================== */
 /* =====================================================================
-   6. VIEWS
-   ===================================================================== */
-
+6. VIEWS
+===================================================================== */
 -- "Unanswered" tab: visible posts with no visible replies, oldest first.
-CREATE OR REPLACE VIEW v_unanswered_posts AS
-SELECT p.id, p.title, p.category_id, c.name AS category_name,
-       p.author_id, p.vote_score, p.created_at
-  FROM post p
+CREATE
+OR REPLACE VIEW v_unanswered_posts AS
+SELECT
+  p.id,
+  p.title,
+  p.category_id,
+  c.name AS category_name,
+  p.author_id,
+  p.vote_score,
+  p.created_at
+FROM
+  post p
   JOIN category c ON c.id = p.category_id
- WHERE p.status = 'visible'
-   AND p.reply_count = 0;
+WHERE
+  p.status = 'visible'
+  AND p.reply_count = 0;
 
 -- "Trending" tab: visible posts active in the last 7 days, scored by
 -- replies (weighted x2) plus votes. Tune the weights in the API if needed.
-CREATE OR REPLACE VIEW v_trending_posts AS
-SELECT p.id, p.title, p.category_id, p.vote_score, p.reply_count,
-       p.last_activity_at,
-       (p.reply_count * 2 + p.vote_score) AS trend_score
-  FROM post p
- WHERE p.status = 'visible'
-   AND p.last_activity_at >= SYSTIMESTAMP - INTERVAL '7' DAY;
+CREATE
+OR REPLACE VIEW v_trending_posts AS
+SELECT
+  p.id,
+  p.title,
+  p.category_id,
+  p.vote_score,
+  p.reply_count,
+  p.last_activity_at,
+  (p.reply_count * 2 + p.vote_score) AS trend_score
+FROM
+  post p
+WHERE
+  p.status = 'visible'
+  AND p.last_activity_at >= SYSTIMESTAMP - INTERVAL '7' DAY;
 
 -- Moderation queue for STAFF and ADMIN (role check happens in the API).
-CREATE OR REPLACE VIEW v_moderation_queue AS
-SELECT f.id         AS flag_id,
-       f.created_at AS flagged_at,
-       f.reason,
-       u.name       AS flagged_by_name,
-       f.post_id,
-       p.title      AS post_title,
-       f.reply_id,
-       CASE WHEN f.reply_id IS NULL THEN 'post' ELSE 'reply' END AS target_type
-  FROM flag f
-  JOIN post p     ON p.id = f.post_id
+CREATE
+OR REPLACE VIEW v_moderation_queue AS
+SELECT
+  f.id AS flag_id,
+  f.created_at AS flagged_at,
+  f.reason,
+  u.name AS flagged_by_name,
+  f.post_id,
+  p.title AS post_title,
+  f.reply_id,
+  CASE
+    WHEN f.reply_id IS NULL THEN 'post'
+    ELSE 'reply'
+  END AS target_type
+FROM
+  flag f
+  JOIN post p ON p.id = f.post_id
   JOIN app_user u ON u.id = f.flagged_by
- WHERE f.status = 'open';
-
+WHERE
+  f.status = 'open';
 
 /* =====================================================================
-   7. SEED DATA: the six categories named in the SOW
-   ===================================================================== */
-INSERT INTO category (name, description, sort_order) VALUES
-  ('Interview Prep',        'Questions, loops, and debriefs from real interviews', 1);
-INSERT INTO category (name, description, sort_order) VALUES
-  ('Resume & Applications', 'Resume feedback and application strategy', 2);
-INSERT INTO category (name, description, sort_order) VALUES
-  ('Offer & Negotiation',   'Comparing offers and negotiating pay or start dates', 3);
-INSERT INTO category (name, description, sort_order) VALUES
-  ('Industry Insight',      'What working in a given industry is actually like', 4);
-INSERT INTO category (name, description, sort_order) VALUES
-  ('Career Fairs & Events', 'Prep and recaps for GMU career events', 5);
-INSERT INTO category (name, description, sort_order) VALUES
-  ('General',               'Anything else about the job and internship search', 6);
+7. SEED DATA: the six categories named in the SOW
+===================================================================== */
+INSERT INTO
+  category (name, description, sort_order)
+VALUES
+  (
+    'Interview Prep',
+    'Questions, loops, and debriefs from real interviews',
+    1
+  );
+
+INSERT INTO
+  category (name, description, sort_order)
+VALUES
+  (
+    'Resume & Applications',
+    'Resume feedback and application strategy',
+    2
+  );
+
+INSERT INTO
+  category (name, description, sort_order)
+VALUES
+  (
+    'Offer & Negotiation',
+    'Comparing offers and negotiating pay or start dates',
+    3
+  );
+
+INSERT INTO
+  category (name, description, sort_order)
+VALUES
+  (
+    'Industry Insight',
+    'What working in a given industry is actually like',
+    4
+  );
+
+INSERT INTO
+  category (name, description, sort_order)
+VALUES
+  (
+    'Career Fairs & Events',
+    'Prep and recaps for GMU career events',
+    5
+  );
+
+INSERT INTO
+  category (name, description, sort_order)
+VALUES
+  (
+    'General',
+    'Anything else about the job and internship search',
+    6
+  );
+
 COMMIT;
 
-
 /* =====================================================================
-   8. SAMPLE DATA + SMOKE TEST (optional)
-   Fixed UUIDs make the rows easy to reference. Delete this section
-   before handing the schema to the integration environment.
-   ===================================================================== */
-INSERT INTO app_user (id, name, gmu_email, role) VALUES
-  ('00000000-0000-0000-0000-000000000001', 'Sam Student',   'sstudent@gmu.edu', 'STUDENT');
-INSERT INTO app_user (id, name, gmu_email, role) VALUES
-  ('00000000-0000-0000-0000-000000000002', 'Riley Student', 'rstudent@gmu.edu', 'STUDENT');
-INSERT INTO app_user (id, name, gmu_email, role) VALUES
-  ('00000000-0000-0000-0000-000000000003', 'Casey Staff',   'cstaff@gmu.edu',   'STAFF');
-INSERT INTO app_user (id, name, gmu_email, role) VALUES
-  ('00000000-0000-0000-0000-000000000004', 'Alex Admin',    'aadmin@gmu.edu',   'ADMIN');
+8. SAMPLE DATA + SMOKE TEST (optional)
+Fixed UUIDs make the rows easy to reference. Delete this section
+before handing the schema to the integration environment.
+===================================================================== */
+INSERT INTO
+  app_user (id, name, gmu_email, role)
+VALUES
+  (
+    '00000000-0000-0000-0000-000000000001',
+    'Sam Student',
+    'sstudent@gmu.edu',
+    'STUDENT'
+  );
 
-INSERT INTO forum_user_settings (user_id, hide_post_history) VALUES
+INSERT INTO
+  app_user (id, name, gmu_email, role)
+VALUES
+  (
+    '00000000-0000-0000-0000-000000000002',
+    'Riley Student',
+    'rstudent@gmu.edu',
+    'STUDENT'
+  );
+
+INSERT INTO
+  app_user (id, name, gmu_email, role)
+VALUES
+  (
+    '00000000-0000-0000-0000-000000000003',
+    'Casey Staff',
+    'cstaff@gmu.edu',
+    'STAFF'
+  );
+
+INSERT INTO
+  app_user (id, name, gmu_email, role)
+VALUES
+  (
+    '00000000-0000-0000-0000-000000000004',
+    'Alex Admin',
+    'aadmin@gmu.edu',
+    'ADMIN'
+  );
+
+INSERT INTO
+  forum_user_settings (user_id, hide_post_history)
+VALUES
   ('00000000-0000-0000-0000-000000000001', 1);
 
-INSERT INTO tag (name, tag_type) VALUES ('Capital One', 'employer');
-INSERT INTO tag (name, tag_type) VALUES ('SWE Intern',  'role');
+INSERT INTO
+  tag (name, tag_type)
+VALUES
+  ('Capital One', 'employer');
+
+INSERT INTO
+  tag (name, tag_type)
+VALUES
+  ('SWE Intern', 'role');
 
 -- Two posts in Interview Prep
-INSERT INTO post (id, author_id, category_id, title, body)
-SELECT '10000000-0000-0000-0000-000000000001',
-       '00000000-0000-0000-0000-000000000001', id,
-       'Anyone interviewed with Capital One recently?',
-       'Have a technical round next week. What should I expect?'
-  FROM category WHERE name = 'Interview Prep';
+INSERT INTO
+  post (id, author_id, category_id, title, body)
+SELECT
+  '10000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
+  id,
+  'Anyone interviewed with Capital One recently?',
+  'Have a technical round next week. What should I expect?'
+FROM
+  category
+WHERE
+  name = 'Interview Prep';
 
-INSERT INTO post (id, author_id, category_id, title, body)
-SELECT '10000000-0000-0000-0000-000000000002',
-       '00000000-0000-0000-0000-000000000002', id,
-       'Best way to practice system design?',
-       'Looking for resources for new-grad level system design.'
-  FROM category WHERE name = 'Interview Prep';
+INSERT INTO
+  post (id, author_id, category_id, title, body)
+SELECT
+  '10000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000002',
+  id,
+  'Best way to practice system design?',
+  'Looking for resources for new-grad level system design.'
+FROM
+  category
+WHERE
+  name = 'Interview Prep';
 
-INSERT INTO post_tag (post_id, tag_id)
-SELECT '10000000-0000-0000-0000-000000000001', id FROM tag WHERE name IN ('Capital One','SWE Intern');
+INSERT INTO
+  post_tag (post_id, tag_id)
+SELECT
+  '10000000-0000-0000-0000-000000000001',
+  id
+FROM
+  tag
+WHERE
+  name IN ('Capital One', 'SWE Intern');
 
 -- The statements below are what the Java layer would run. Each group
 -- marked [txn] belongs in one transaction.
-
 -- [txn] Riley replies to post 1
-INSERT INTO reply (id, post_id, author_id, body) VALUES
-  ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001',
-   '00000000-0000-0000-0000-000000000002', 'Two LeetCode mediums and a behavioral round.');
-UPDATE post SET reply_count = reply_count + 1, last_activity_at = SYSTIMESTAMP
- WHERE id = '10000000-0000-0000-0000-000000000001';
+INSERT INTO
+  reply (id, post_id, author_id, body)
+VALUES
+  (
+    '20000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000002',
+    'Two LeetCode mediums and a behavioral round.'
+  );
+
+UPDATE post
+SET
+  reply_count = reply_count + 1,
+  last_activity_at = SYSTIMESTAMP
+WHERE
+  id = '10000000-0000-0000-0000-000000000001';
 
 -- [txn] Sam replies under Riley's reply (nested)
-INSERT INTO reply (id, post_id, parent_reply_id, author_id, body) VALUES
-  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001',
-   '20000000-0000-0000-0000-000000000001',
-   '00000000-0000-0000-0000-000000000001', 'Thanks! Was it on a shared editor?');
-UPDATE post SET reply_count = reply_count + 1, last_activity_at = SYSTIMESTAMP
- WHERE id = '10000000-0000-0000-0000-000000000001';
+INSERT INTO
+  reply (id, post_id, parent_reply_id, author_id, body)
+VALUES
+  (
+    '20000000-0000-0000-0000-000000000002',
+    '10000000-0000-0000-0000-000000000001',
+    '20000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000001',
+    'Thanks! Was it on a shared editor?'
+  );
+
+UPDATE post
+SET
+  reply_count = reply_count + 1,
+  last_activity_at = SYSTIMESTAMP
+WHERE
+  id = '10000000-0000-0000-0000-000000000001';
 
 -- [txn] Riley upvotes Sam's post
-INSERT INTO post_vote (post_id, user_id) VALUES
-  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002');
-UPDATE post SET vote_score = vote_score + 1
- WHERE id = '10000000-0000-0000-0000-000000000001';
+INSERT INTO
+  post_vote (post_id, user_id)
+VALUES
+  (
+    '10000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000002'
+  );
+
+UPDATE post
+SET
+  vote_score = vote_score + 1
+WHERE
+  id = '10000000-0000-0000-0000-000000000001';
 
 -- [txn] Sam upvotes Riley's reply
-INSERT INTO reply_vote (reply_id, user_id) VALUES
-  ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001');
-UPDATE reply SET vote_score = vote_score + 1
- WHERE id = '20000000-0000-0000-0000-000000000001';
+INSERT INTO
+  reply_vote (reply_id, user_id)
+VALUES
+  (
+    '20000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000001'
+  );
+
+UPDATE reply
+SET
+  vote_score = vote_score + 1
+WHERE
+  id = '20000000-0000-0000-0000-000000000001';
 
 -- Sam marks Riley's reply as helpful, staff pins the post
 UPDATE post
-   SET helpful_reply_id = '20000000-0000-0000-0000-000000000001',
-       is_pinned = 1,
-       pinned_by = '00000000-0000-0000-0000-000000000003'
- WHERE id = '10000000-0000-0000-0000-000000000001';
+SET
+  helpful_reply_id = '20000000-0000-0000-0000-000000000001',
+  is_pinned = 1,
+  pinned_by = '00000000-0000-0000-0000-000000000003'
+WHERE
+  id = '10000000-0000-0000-0000-000000000001';
 
 -- Riley flags the nested reply
-INSERT INTO flag (id, post_id, reply_id, flagged_by, reason) VALUES
-  ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001',
-   '20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002',
-   'Test flag for smoke test');
+INSERT INTO
+  flag (id, post_id, reply_id, flagged_by, reason)
+VALUES
+  (
+    '30000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    '20000000-0000-0000-0000-000000000002',
+    '00000000-0000-0000-0000-000000000002',
+    'Test flag for smoke test'
+  );
 
 -- [txn] Staff removes it (Java checks flag.status = 'open' first)
-INSERT INTO moderation_action (flag_id, moderator_id, action, reason) VALUES
-  ('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003',
-   'remove', 'Smoke test removal');
-UPDATE flag  SET status = 'actioned' WHERE id = '30000000-0000-0000-0000-000000000001';
-UPDATE reply SET status = 'removed'  WHERE id = '20000000-0000-0000-0000-000000000002';
-UPDATE post  SET reply_count = reply_count - 1
- WHERE id = '10000000-0000-0000-0000-000000000001';
+INSERT INTO
+  moderation_action (flag_id, moderator_id, action, reason)
+VALUES
+  (
+    '30000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000003',
+    'remove',
+    'Smoke test removal'
+  );
+
+UPDATE flag
+SET
+  status = 'actioned'
+WHERE
+  id = '30000000-0000-0000-0000-000000000001';
+
+UPDATE reply
+SET
+  status = 'removed'
+WHERE
+  id = '20000000-0000-0000-0000-000000000002';
+
+UPDATE post
+SET
+  reply_count = reply_count - 1
+WHERE
+  id = '10000000-0000-0000-0000-000000000001';
+
 COMMIT;
 
 -- Expected: post 1 -> vote_score 1, reply_count 1 (one reply removed), pinned, helpful set
 --           post 2 -> reply_count 0, shows up in v_unanswered_posts
-SELECT id, title, vote_score, reply_count, is_pinned, helpful_reply_id, status FROM post ORDER BY created_at;
-SELECT id, parent_reply_id, vote_score, status FROM reply ORDER BY created_at;
-SELECT * FROM v_unanswered_posts;
-SELECT * FROM v_trending_posts ORDER BY trend_score DESC;
-SELECT * FROM v_moderation_queue;          -- expected: no rows, the flag was actioned
-SELECT id, status FROM flag;               -- expected: actioned
+SELECT
+  id,
+  title,
+  vote_score,
+  reply_count,
+  is_pinned,
+  helpful_reply_id,
+  status
+FROM
+  post
+ORDER BY
+  created_at;
 
+SELECT
+  id,
+  parent_reply_id,
+  vote_score,
+  status
+FROM
+  reply
+ORDER BY
+  created_at;
+
+SELECT
+  *
+FROM
+  v_unanswered_posts;
+
+SELECT
+  *
+FROM
+  v_trending_posts
+ORDER BY
+  trend_score DESC;
+
+SELECT
+  *
+FROM
+  v_moderation_queue;
+
+-- expected: no rows, the flag was actioned
+SELECT
+  id,
+  status
+FROM
+  flag;
+
+-- expected: actioned
 /* Negative tests: each of these SHOULD fail at the database level.
-   Self-votes and re-resolving a flag are now Java checks, so they are
-   not listed here. Uncomment one at a time.
+Self-votes and re-resolving a flag are now Java checks, so they are
+not listed here. Uncomment one at a time.
 -- Double vote (ORA-00001 on pk_post_vote):
 INSERT INTO post_vote (post_id, user_id) VALUES
-  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002');
+('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002');
 -- Helpful reply from a different post (ORA-02291 on fk_post_helpful_reply):
 UPDATE post SET helpful_reply_id = '20000000-0000-0000-0000-000000000001'
- WHERE id = '10000000-0000-0000-0000-000000000002';
+WHERE id = '10000000-0000-0000-0000-000000000002';
 -- Second action on the same flag (ORA-00001 on uq_mod_flag):
 INSERT INTO moderation_action (flag_id, moderator_id, action, reason) VALUES
-  ('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004', 'warn', 'again');
+('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004', 'warn', 'again');
 -- Pinned without pinned_by (ORA-02290 on ck_post_pin_pair):
 UPDATE post SET is_pinned = 1, pinned_by = NULL WHERE id = '10000000-0000-0000-0000-000000000002';
-*/
+ */
