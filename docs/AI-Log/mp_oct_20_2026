@@ -1,0 +1,17 @@
+AI Prompt Log Entry
+Date: 2026-10-20
+Author: Michael Pieterse
+Story: Complete Database Sql
+Tool: Claude (Anthropic)
+File: subsystem5_forum_oracle.sql
+
+Asked:
+Convert the Subsystem 5 ER diagram into an Oracle SQL database. Then remove the triggers so the logic runs in the Java code instead.
+Produced:
+An Oracle script that creates all 11 tables from the ER diagram: APP_USER, CATEGORY, POST, REPLY, TAG, POST_TAG, POST_VOTE, REPLY_VOTE, FLAG, MODERATION_ACTION, and FORUM_USER_SETTINGS. It includes primary keys, foreign keys, check constraints, and indexes on the columns the API filters on. Composite foreign keys make sure a helpful reply, a nested reply, and a flagged reply all belong to the same post. It also has three views for the unanswered, trending, and moderation queue pages, seed data for the six SOW categories, and sample data with negative tests.
+Changed or rejected:
+Removed all seven triggers from the first version. Updating vote and reply counts, blocking self-votes, and closing flags after a 
+moderation action now happen in the Java code. Section 5 of the script lists what the Java layer must handle. Renamed USER to APP_USER 
+and value to vote_value because both are Oracle keywords. Stored UUIDs as VARCHAR2(36) so they match Java’s UUID format. Left Oracle 
+Text full-text search commented out because it needs extra database permissions. APP_USER is only a local stand-in and will be replaced 
+by the Shared Core user table at integration.
