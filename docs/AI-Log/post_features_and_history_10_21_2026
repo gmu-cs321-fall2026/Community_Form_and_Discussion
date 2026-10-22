@@ -1,0 +1,23 @@
+CS 321 AI PROMPT LOG ENTRY
+Name: Reid Buckley
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 10/21/2026
+Tool: Gemini
+
+Asked: Gemini to add features (Posts and replies support upvoting. The post creator can mark a reply as 
+"helpful" (Stack Overflow-style). Posts can be pinned by Career Services Staff (for important announcements) 
+or flagged by users for moderation
+
+Produce: The ability to upvote, marking as helpful for creators only, pinning by staff, and flagging for moderators
+
+Changed: Gemini had the & symbol in the categories enums which is not allowed so & was updated to AND
+
+Asked: Gemini to add (Each user has a posting history visible on their profile (posts they've created, 
+replies they've made). This is opt-out, users can hide their posting history from their public profile 
+while still contributing to the forum
+
+Produced: The ability to click on profile names and a popup window would appear with the userse post and reply
+title. Users are also able to opt out of having their history be visible
+
+Changed: Clicking on the username would redirect to a profile page that contains not only the titles but 
+all of the information for the posts and replies
