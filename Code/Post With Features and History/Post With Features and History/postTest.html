@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Forum</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            padding: 20px;
+        }
+
+        .forum-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .create-post-card {
+            background-color: #ffffff;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+        }
+
+        .create-post-card h2 {
+            margin-top: 0;
+            color: #007bff;
+            font-size: 1.25em;
+        }
+
+        .post-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .post-form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .post-form-row input,
+        .post-form-row select {
+            flex: 1;
+        }
+
+        .post-form input,
+        .post-form select,
+        .post-form textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .post-form textarea {
+            resize: vertical;
+            height: 70px;
+        }
+
+        .post-form button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .post-form button:hover {
+            background-color: #0056b3;
+        }
+
+        .post-card {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .post-card.pinned {
+            border: 2px solid #28a745;
+            background-color: #f4fff4;
+        }
+        .pinned-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        .flagged-banner {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 8px 12px;
+            font-size: 0.85em;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            border: 1px solid #ffeeba;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .category-badge {
+            background-color: #007bff;
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .post-title {
+            margin: 0 0 10px 0;
+            color: #222;
+        }
+
+        .post-body {
+            color: #444;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .post-actions, .reply-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .action-btn {
+            background: #f8f9fa;
+            border: 1px solid #ccc;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #333;
+        }
+        .action-btn:hover {
+            background-color: #e2e6ea;
+        }
+
+        .tags-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .tag-pill {
+            background-color: #eef2f7;
+            color: #334e68;
+            font-size: 0.8em;
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid #d9e2ec;
+        }
+
+        .replies-section {
+            border-top: 2px solid #f0f0f0;
+            padding-top: 15px;
+        }
+
+        .replies-section h3 {
+            font-size: 1em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .reply-card {
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+
+        .reply-card.helpful {
+            border-left: 4px solid #28a745;
+            background-color: #e6f4ea;
+        }
+
+        .helpful-badge {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+
+        .reply-header {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reply-body {
+            font-size: 0.9em;
+            color: #333;
+            margin: 0 0 8px 0;
+        }
+
+        .reply-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .reply-form input,
+        .reply-form textarea {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .reply-form textarea {
+            resize: vertical;
+            height: 50px;
+        }
+
+        .reply-form button {
+            align-self: flex-end;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .reply-form button:hover {
+            background-color: #0056b3;
+        }
+
+        .user-link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .user-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="forum-container">
+        <h1>Community Forum</h1>
+
+        <!-- CREATE NEW POST FORM -->
+        <div class="create-post-card">
+            <h2>Create a New Post</h2>
+            <form id="newPostForm" class="post-form">
+                <div class="post-form-row">
+                    <input type="text" id="postAuthor" placeholder="Your Username" required />
+                    <select id="postCategory" required>
+                        <option value="GENERAL">GENERAL</option>
+                        <option value="INTERVIEW_PREP">INTERVIEW_PREP</option>
+                        <option value="RESUME_AND_APPLICATION">RESUME_AND_APPLICATION</option>
+                        <option value="OFFER_AND_NEGOTIATION">OFFER_AND_NEGOTIATION</option>
+                        <option value="INDUSTRY_INSIGHT">INDUSTRY_INSIGHT</option>
+                        <option value="CAREER_FAIRS_AND_EVENTS">CAREER_FAIRS_AND_EVENTS</option>
+                    </select>
+                </div>
+                <input type="text" id="postTitle" placeholder="Post Title (1 - 120 characters)" maxlength="120" required />
+                <textarea id="postBody" placeholder="What's on your mind?" required></textarea>
+                <button type="submit">Create Post</button>
+            </form>
+        </div>
+        
+        <div id="postsFeed"></div>
+    </div>
+
+    <script src="testPost.js"></script>
+</body>
+</html>

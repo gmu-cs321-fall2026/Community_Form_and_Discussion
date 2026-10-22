@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            padding: 20px;
+        }
+        .profile-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .privacy-box {
+            margin-bottom: 20px;
+            background: #eef2f7;
+            padding: 12px;
+            border-radius: 4px;
+        }
+        .hidden-message {
+            color: #666;
+            font-style: italic;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        /* Profile Post Card Styling */
+        .profile-post-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .profile-post-title {
+            margin: 0 0 6px 0;
+            font-size: 1em;
+            color: #007bff;
+        }
+        .profile-post-body {
+            margin: 0;
+            font-size: 0.9em;
+            color: #444;
+            line-height: 1.4;
+        }
+        ul { padding-left: 20px; font-size: 0.95em; line-height: 1.5; }
+        li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <div class="profile-container">
+        <a href="postTest.html" class="back-link">&larr; Back to Community Forum</a>
+        <h1 id="profileTitle">User Profile</h1>
+        
+        <div id="privacySection"></div>
+        <div id="profileContent"></div>
+    </div>
+
+    <script src="testPost.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetUser = urlParams.get('user');
+            
+            if (targetUser) {
+                renderProfilePage(targetUser, currentLoggedInUser); 
+            } else {
+                document.getElementById('profileContent').innerHTML = "<p>No user specified.</p>";
+            }
+        });
+    </script>
+</body>
+</html>
