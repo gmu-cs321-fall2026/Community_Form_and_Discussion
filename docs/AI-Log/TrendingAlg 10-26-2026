@@ -1,0 +1,21 @@
+CS 321 AI PROMPT LOG ENTRY
+Name: Sawyer Whiteside
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 10/26/2026
+Tool: Claude
+
+Asked: Claude to produce a java file under the hierarchy of ForumPosts.java so that posts are brought to the top of the
+forum based on the following factors: time since post was made, number of replies, number of upvotes, whether it was marked helpful
+
+Additionally, I asked Claude for clarification in appending to the ForumPostSmokeTest.java file so test cases can be made
+for the new TrnadingRanker.java file to be added to the branch
+
+Produced: A TrandingRanker.java file which set up the public class TrendingRanker
+The class includes two constructors, one which allows for specification of parameters, and provides the logic for the ranking of posts
+THe basic logic of the score is as follows: score = (1 + upvotes + 2*replies + 5*(replies marked as helpful)) / (ageHours + 2)^1.5
+
+The code provided for ForumPostSmokeTest.java requires the creation of a TrendingRanker object and checks to be ran on the object
+ensuring that it works as intended.
+
+Changed: Appended ForumPost.java with a getter for posts time of creation through getCreatedAt() so the time could be used 
+in the rank function of TrendingRanker.java
