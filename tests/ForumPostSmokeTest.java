@@ -1,6 +1,7 @@
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 public class ForumPostSmokeTest {
 
@@ -47,6 +48,25 @@ public class ForumPostSmokeTest {
 
         check(((List<?>) history.get("posts")).isEmpty(),
               "Private posting history was exposed");
+
+        // Test Trending Ranking
+        TrendingRanker ranker = new TrendingRanker();
+        LocalDateTime now = LocalDateTime.now();
+
+        Post quiet = forum.createPost(
+            "Quiet post", "Nobody has engaged here",
+            "student3", Category.GENERAL, null
+        );
+
+        Reply helpfulReply = post.getReplies().get(0);
+        helpfulReply.toggleHelpful("student1", "student1");
+
+        List<Post> ranked = ranker.rank(forum.getAllPosts(), now);
+
+        check(ranked.size() == 2,
+              "Ranking dropped posts");
+        check(ranked.get(0).getId().equals(post.getId()),
+              "Engaged post should outrank quiet post");
 
         System.out.println("All forum tests passed!");
     }

@@ -171,6 +171,7 @@ class Post {
     public String getBody() { return body; }
     public String getAuthorId() { return authorId; }
     public Category getCategory() { return category; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
     public Map<String, String> getTags() { return Collections.unmodifiableMap(tags); }
     public boolean isPinned() { return isPinned; }
     public Set<String> getUpvotedUserIds() { return Collections.unmodifiableSet(upvotedUserIds); }
