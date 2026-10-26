@@ -1,0 +1,23 @@
+CS 321 AI Prompt Log Entry 3
+Saad Rai
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 10/24/2026
+Tool: ChatGPT
+
+Continuing from Prompt Log Entry 1 but adding another User story to work on in the same conversation, 
+I asked ChatGPT to do one for the another user story regarding full text search across post titles and bodies.
+
+Asked: now that im done with moderation queue user story. i need to do one for full text search across post titles and 
+bodies and the user story is this: As a student, I would like a way to search through posts by category, 
+so that I can find the posts most applicable to my life
+
+1. User should be able to filter posts through category tabs
+2. Category tabs should include Interview Prep, Resume & Applications, Offer & Negotiation, Industry Insight, Career Fairs & Events, General  
+and here's the description of it **User posting history:** Each user has a posting history visible on their profile (posts they've created, 
+replies they've made). This is opt-out, users can hide their posting history from their public profile while still contributing to the forum, 
+which matters when someone is posting candidly about a specific employer's interview process. so i need to make a demo similar to moderation queue
+
+
+Produced: It developed a similar code structure like moderation queue but this time around it made one regarding full text search and a live demo of how it works!
+
+Changed: I removed the extra features chatgpt added to the code such as create a post or create your own category as it wasnt according to the user story I'm working on but seemed useful to add to the project later on if wanted.
