@@ -18,7 +18,7 @@ public class ModerationWebServer {
         posts.get(0).flagged = true;
         posts.get(1).flagged = true;
 
-        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8080), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8080), 0);
         server.createContext("/", ModerationWebServer::handle);
         server.start();
         System.out.println("Moderation webpage: http://localhost:8080");
