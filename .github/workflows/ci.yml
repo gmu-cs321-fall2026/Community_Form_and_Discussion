@@ -18,11 +18,11 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
+      - name: Build Docker image
+        run: docker build -t community-forum-ci .
+
+      - name: Run Java tests inside Docker
+        run: docker run --rm community-forum-ci java -cp classes ForumPostSmokeTest
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -38,13 +38,3 @@ jobs:
             --rule 'no-unreachable:error' \
             "Code/Post With Features and History/Post With Features and History/testPost.js"
 
-      - name: Compile and lint Java
-        run: |
-          mkdir -p build/ci
-          javac -Xlint:deprecation,unchecked -Werror -d build/ci \
-            "Code/Post With Features and History/Post With Features and History/ForumPost.java" \
-            "Code/Moderation Queue/ModerationWebServer.java" \
-            tests/ForumPostSmokeTest.java
-
-      - name: Run automated tests
-        run: java -cp build/ci ForumPostSmokeTest
