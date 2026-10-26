@@ -63,7 +63,7 @@ public class ForumPostSmokeTest {
 
         List<Post> ranked = ranker.rank(forum.getAllPosts(), now);
 
-        check(ranked.size() = 2,
+        check(ranked.size() == 2,
               "Ranking dropped posts");
         check(ranked.get(0).getId().equals(post.getId()),
               "Engaged post should outrank quiet post");
