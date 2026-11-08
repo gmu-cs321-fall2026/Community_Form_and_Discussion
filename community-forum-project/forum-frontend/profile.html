@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Mason Community Forum</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 20px; background-color: #f9f9f9; color: #333; }
+        h1, h2 { color: #006633; }
+        .profile-container { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .profile-post-card { background: #f7fafc; padding: 15px; border-radius: 6px; margin-bottom: 12px; border-left: 4px solid #006633; }
+        .profile-post-title { margin: 0 0 5px 0; font-size: 1.2em; color: #1a202c; }
+        .profile-post-body { margin: 0; color: #4a5568; line-height: 1.4; }
+        .back-link { display: inline-block; margin-bottom: 15px; color: #006633; text-decoration: none; font-weight: bold; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <a href="postTest.html" class="back-link">&larr; Back to Forum Feed</a>
+
+    <div class="profile-container">
+        <h2 id="profileTitle">User Profile</h2>
+        
+        <!-- Container where user's created posts and replies will load -->
+        <div id="profileContent">
+            <p>Loading profile data...</p>
+        </div>
+    </div>
+
+    <!-- Script to automatically parse URL parameters and render profile history -->
+    <script src="testPost.js"></script>
+    <script>
+        // Automatically grab the target user from the URL query string (e.g., profile.html?user=AlexUser)
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUser = urlParams.get('user');
+        
+        if (targetUser) {
+            renderProfilePage(targetUser, "Viewer");
+        } else {
+            document.getElementById('profileContent').innerHTML = "<p style='color: red;'>No user specified.</p>";
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mason Career Community Forum</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 20px; background-color: #f9f9f9; color: #333; }
+        h1 { color: #006633; }
+        .post-card, .form-container { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .post-card.pinned { border-left: 5px solid #ffc107; background-color: #fffdf8; }
+        .pinned-badge { background-color: #ffc107; color: #333; padding: 3px 8px; font-size: 0.8em; font-weight: bold; border-radius: 4px; }
+        .category-badge { background-color: #e2e8f0; color: #4a5568; padding: 3px 8px; font-size: 0.8em; border-radius: 4px; font-weight: bold; }
+        .flagged-banner { background-color: #fff5f5; color: #c53030; padding: 8px; border-radius: 4px; font-size: 0.9em; margin-bottom: 10px; }
+        .post-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.85em; color: #666; }
+        .post-title { margin: 0 0 10px 0; font-size: 1.4em; color: #1a202c; }
+        .post-body { margin-bottom: 15px; line-height: 1.5; }
+        .post-actions, .reply-actions { display: flex; gap: 10px; margin-bottom: 15px; }
+        .action-btn { background: #edf2f7; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em; }
+        .action-btn:hover { background: #e2e8f0; }
+        .replies-section { border-top: 1px solid #edf2f7; padding-top: 15px; margin-top: 15px; }
+        .reply-card { background: #f7fafc; padding: 12px; border-radius: 6px; margin-bottom: 10px; }
+        .reply-card.helpful { border-left: 4px solid #48bb78; }
+        .helpful-badge { color: #2f855a; font-weight: bold; font-size: 0.8em; }
+        input, select, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; }
+        button[type="submit"] { background-color: #006633; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button[type="submit"]:hover { background-color: #004d26; }
+        .user-link { color: #006633; text-decoration: none; font-weight: bold; }
+        .user-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <h1>Mason Community Forum</h1>
+
+    <!-- New Post Creation Form -->
+    <div class="form-container">
+        <h3>Create a New Post</h3>
+        <form id="newPostForm">
+            <input type="text" id="postAuthor" placeholder="Your Username (e.g. AlexUser)" required />
+            <select id="postCategory" required>
+                <option value="GENERAL">General Discussion</option>
+                <option value="INTERVIEW_PREP">Interview Prep</option>
+                <option value="RESUME_AND_APPLICATION">Resume & Application</option>
+                <option value="OFFER_AND_NEGOTIATION">Offer & Negotiation</option>
+                <option value="INDUSTRY_INSIGHT">Industry Insight</option>
+                <option value="CAREER_FAIRS_AND_EVENTS">Career Fairs & Events</option>
+            </select>
+            <input type="text" id="postTitle" placeholder="Post Title" required />
+            <textarea id="postBody" rows="4" placeholder="Write your discussion details here..." required></textarea>
+            <button type="submit">Publish Post</button>
+        </form>
+    </div>
+
+    <!-- Feed Container where posts load dynamically -->
+    <div id="postsFeed">
+        <!-- Posts from Spring Boot database will render here -->
+    </div>
+
+    <!-- Link your frontend JavaScript logic file -->
+    <script src="testPost.js"></script>
+</body>
+</html>
