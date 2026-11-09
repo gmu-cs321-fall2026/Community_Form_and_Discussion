@@ -1,3 +1,4 @@
+```text
 community-forum-project/
 ├── forum-backend/
 │   └── src/
@@ -22,5 +23,5 @@ community-forum-project/
 │   ├── postTest.html
 │   ├── profile.html
 │   └── testPost.js
-└── forum-database/
+└── forum-base/
     └── subsystem5_forum_mysql.sql
