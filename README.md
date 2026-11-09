@@ -1,6 +1,9 @@
 ```text
 community-forum-project/
+├── Dockerfile
 ├── forum-backend/
+│   ├── Dockerfile
+│   ├── pom.xml
 │   └── src/
 │       ├── main/
 │       │   ├── java/
@@ -17,8 +20,8 @@ community-forum-project/
 │       │   │               ├── FlagRepository.java
 │       │   │               └─ PostRepository.java
 │       │   └── resources/
-│       │       └─ application.properties
-│       └── pom.xml
+│       │       └── application.properties
+│       └── test/
 ├── forum-frontend/
 │   ├── postTest.html
 │   ├── profile.html
