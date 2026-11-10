@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Community Forum</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+  }
+
+  .layout {
+    display: flex;
+    gap: 20px;
+  }
+
+  aside {
+    width: 200px;
+  }
+
+  main {
+    flex: 1;
+  }
+
+  button {
+    margin: 5px;
+    padding: 8px;
+    cursor: pointer;
+  }
+
+  .post-card {
+    border: 1px solid gray;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+
+<body>
+
+<h1>Mason CareerLaunch - Community Forum</h1>
+
+<input type="search" id="search" placeholder="Search posts">
+
+<div class="layout">
+
+  <aside>
+    <h3>Topics</h3>
+    <button data-category="ALL">All Posts</button>
+    <button data-category="GENERAL">General</button>
+    <button data-category="CAREER_ADVICE">Career Advice</button>
+    <button data-category="JOB_BOARD">Job Board</button>
+    <button data-category="TECHNICAL">Technical</button>
+    <button data-category="ANNOUNCEMENT">Announcements</button>
+  </aside>
+
+  <main>
+    <h2>Recent Questions</h2>
+    <div id="post-list"></div>
+  </main>
+
+  <aside>
+    <h3>Career Advisors</h3>
+    <p>Advisor information coming soon.</p>
+
+    <h3>Popular Topics</h3>
+    <p>Internships, Resumes, Interviews</p>
+
+    <h3>Quick Links</h3>
+    <p>Career Services</p>
+  </aside>
+
+</div>
+
+<script>
+  // Sample posts until database integration is ready
+  const posts = [
+    {
+      title: "How do I prepare for interviews?",
+      category: "TECHNICAL",
+      author: "student1"
+    },
+    {
+      title: "Tips for improving my resume?",
+      category: "CAREER_ADVICE",
+      author: "student2"
+    },
+    {
+      title: "Where can I find internships?",
+      category: "JOB_BOARD",
+      author: "student3"
+    }
+  ];
+
+  let selectedCategory = "ALL";
+
+  function displayPosts() {
+    const search = document.getElementById("search").value.toLowerCase();
+    const postList = document.getElementById("post-list");
+
+    postList.innerHTML = "";
+
+    posts.forEach(post => {
+      if ((selectedCategory === "ALL" ||
+           post.category === selectedCategory) &&
+          post.title.toLowerCase().includes(search)) {
+
+        const card = document.createElement("div");
+        card.className = "post-card";
+
+        const title = document.createElement("h3");
+        title.textContent = post.title;
+
+        const info = document.createElement("p");
+        info.textContent = post.author + " - " + post.category;
+
+        card.append(title, info);
+        postList.appendChild(card);
+      }
+    });
+  }
+
+  document.querySelectorAll("[data-category]").forEach(button => {
+    button.addEventListener("click", () => {
+      selectedCategory = button.dataset.category;
+      displayPosts();
+    });
+  });
+
+  document.getElementById("search").addEventListener("input", displayPosts);
+
+  displayPosts();
+</script>
+
+</body>
+</html>
