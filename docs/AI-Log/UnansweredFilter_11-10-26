@@ -1,0 +1,22 @@
+CS 321 AI PROMPT LOG ENTRY
+Name: Sawyer Whiteside
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 11/10/2026
+Tool: Claude
+
+Asked:
+Task: Create an unanswered filter for posts
+Context: I need to create a java class which will work alongside the other classes in the Code directory,
+which will allow posts to be filtered based on whether or not they have been replied to yet.
+
+Produced: 
+A UnansweredFilter.java file, which sorts posts by whether or not they are unanswered, including added complexity
+for if the author's reply is to be ignored.
+The code does have the smell of added complexity in the form of unnecessary features in some of its functions which I changed.
+For example, in some of the filter functions, there is a check for if category equals null which is an unnecessary check.
+
+Additionally, code was provided for ForumPostSmokeTest.java which includes checks for when there is a posts with no replies,
+when there is a post with replies, and when there is a post with only an author's reply.
+
+Changed:
+Removed the checks for category against null in some of the filter functions, as each post will always have a category.
