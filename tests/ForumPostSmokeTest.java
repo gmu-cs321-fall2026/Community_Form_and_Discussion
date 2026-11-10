@@ -68,6 +68,21 @@ public class ForumPostSmokeTest {
         check(ranked.get(0).getId().equals(post.getId()),
               "Engaged post should outrank quiet post");
 
+        // Test Unanswered Filter
+        UnansweredFilter unanswered = new UnansweredFilter();
+        List<Post> waiting = unanswered.filter(forum);
+
+        check(waiting.size() == 1, "Unanswered filter should return exactly one post");
+        check(waiting.get(0).getId().equals(quiet.getId()),
+              "Quiet post should be the unanswered one");
+
+        // Author-only replies should not count when ignoreAuthorReplies is on
+        quiet.addReply("student3", "Bumping this");
+        check(unanswered.filter(forum).size() == 0,
+              "Default filter treats the author's own reply as an answer");
+        check(new UnansweredFilter(true).filter(forum).size() == 1,
+              "Filter ignoring author replies should still list the post");
+
         System.out.println("All forum tests passed!");
     }
 
