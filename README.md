@@ -1,3 +1,4 @@
+```text
 community-forum-project/
 ├── Dockerfile
 ├── forum-backend/
