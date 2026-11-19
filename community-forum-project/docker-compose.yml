@@ -1,0 +1,40 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: forum-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: community_forum
+      MYSQL_DATABASE: mason_forum
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./forum-database/subsystem5_forum_mysql.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: forum-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mason_forum?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: community_forum
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ./forum-frontend
+    container_name: forum-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+
+volumes:
+  mysql-data:
