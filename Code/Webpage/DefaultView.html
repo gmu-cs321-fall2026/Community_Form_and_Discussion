@@ -6,35 +6,144 @@
 <title>Community Forum</title>
 
 <style>
+  :root {
+  --mason-green: #006633;
+  --mason-gold: #FFCC33;
+  --dark-green: #004D26;
+  --background: #F5F7F5;
+  --text-color: #263238;
+}
   body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-  }
+  font-family: "Segoe UI", Arial, sans-serif;
+  margin: 20px;
+  background-color: var(--background);
+  color: var(--text-color);
+}
+  h1 {
+  background-color: var(--mason-green);
+  color: white;
+  padding: 24px 28px;
+  border-bottom: 5px solid var(--mason-gold);
+  border-radius: 12px;
+  margin-bottom: 22px;
+  font-size: 28px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 102, 51, 0.12);
+}
+
+h2, h3 {
+  color: var(--dark-green);
+}
+  #search {
+  display: block;
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid #DDE5DD;
+  border-radius: 10px;
+  background-color: white;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--text-color);
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+  #search:focus {
+  border-color: var(--mason-green);
+  outline: 3px solid rgba(255, 204, 51, 0.5);
+  outline-offset: 1px;
+  box-shadow: 0 3px 10px rgba(0, 102, 51, 0.08);
+}
+
+#search::placeholder {
+  color: #7A887E;
+}
 
   .layout {
-    display: flex;
-    gap: 20px;
-  }
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 250px;
+  gap: 24px;
+  align-items: start;
+  margin-top: 25px;
+}
 
   aside {
-    width: 200px;
-  }
+  background-color: white;
+  padding: 20px;
+  border: 1px solid #E0E6E0;
+  border-top: 4px solid var(--mason-green);
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+}
 
   main {
-    flex: 1;
-  }
+  min-width: 0;
+}
 
   button {
     margin: 5px;
     padding: 8px;
     cursor: pointer;
   }
+  aside button {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 12px 15px;
+  background-color: white;
+  color: var(--mason-green);
+  border: 1px solid #DDE5DD;
+  border-left: 4px solid var(--mason-gold);
+  border-radius: 8px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+  aside button:hover {
+  background-color: var(--mason-green);
+  color: white;
+  border-color: var(--mason-green);
+  border-left-color: var(--mason-gold);
+  transform: translateX(3px);
+}
+
+aside button:focus-visible {
+  outline: 3px solid var(--mason-gold);
+  outline-offset: 2px;
+}
 
   .post-card {
-    border: 1px solid gray;
-    padding: 10px;
-    margin-bottom: 10px;
+  background-color: white;
+  border: 1px solid #E0E6E0;
+  border-left: 5px solid var(--mason-gold);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.post-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 102, 51, 0.12);
+}
+
+.post-card h3 {
+  color: var(--mason-green);
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.post-card p {
+  color: #66736B;
+  font-size: 14px;
+  margin-bottom: 0;
+}
+  @media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
   }
+}
 </style>
 </head>
 
