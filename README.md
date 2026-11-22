@@ -35,3 +35,7 @@ community-forum-project/
 │    └── testPost.js
 └── forum-database/
    └── subsystem5_forum_mysql.sql
+
+Running Docker
+docker compose up --build
+http://localhost:3000/postTest.html
