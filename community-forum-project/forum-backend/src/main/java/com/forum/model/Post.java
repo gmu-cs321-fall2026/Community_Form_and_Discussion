@@ -1,0 +1,112 @@
+package com.forum.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.*;
+
+@Entity
+@Table(name = "post")
+public class Post {
+
+    @Id
+    @Column(name = "id", updatable = false, nullable = false)
+    private String id = UUID.randomUUID().toString();
+
+    @Column(name = "title", nullable = false, length = 200)
+    private String title;
+
+    @Column(name = "body", nullable = false, columnDefinition = "TEXT")
+    private String body;
+
+    @Column(name = "author_id", nullable = false)
+    private String authorId;
+
+    @Transient
+    private String authorName;
+
+    @Column(name = "category_id", nullable = false)
+    private Integer categoryId;
+
+    @Column(name = "is_pinned", nullable = false)
+    private boolean isPinned = false;
+
+    @Column(name = "pinned_by")
+    private String pinnedBy;
+
+    @Column(name = "status", nullable = false)
+    private String status = "visible";
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "post_tag",
+        joinColumns = @JoinColumn(name = "post_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "post_id")
+    private List<Reply> replies = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "post_vote", joinColumns = @JoinColumn(name = "post_id"))
+    @Column(name = "user_id")
+    private Set<String> upvotes = new HashSet<>();
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "post_id")
+    private List<Flag> flags = new ArrayList<>();
+
+    public Post() {}
+
+    public Post(String title, String body, String authorId, Integer categoryId) {
+        this.id = UUID.randomUUID().toString();
+        this.title = title;
+        this.body = body;
+        this.authorId = authorId;
+        this.categoryId = categoryId;
+        this.createdAt = LocalDateTime.now();
+    }
+
+    // Getters and Setters required by frontend and JSON serialization
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getBody() { return body; }
+    public String getAuthorId() { return authorId; }
+    public Integer getCategoryId() { return categoryId; }
+    public Set<Tag> getTags() { return tags; }
+    public String getStatus() { return status; }
+    public String getAuthorName() {
+        if (authorName != null && !authorName.isBlank()) {
+            return authorName;
+        }
+        return "Unknown User";
+    }
+
+    public void setAuthorName(String authorName) {
+        this.authorName = authorName;
+    }
+    public void setTags(Set<Tag> tags) { this.tags = tags; }
+    
+    // Crucial for frontend: post.pinned looks for isPinned() or getPinned()
+    public boolean isPinned() { return isPinned; }
+    public void setPinned(boolean pinned) { isPinned = pinned; }
+    public void setStatus(String status) { this.status = status; }
+    
+    public String getPinnedBy() { return pinnedBy; }
+    public void setPinnedBy(String pinnedBy) { this.pinnedBy = pinnedBy; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public List<Reply> getReplies() { return replies; }
+    public Set<String> getUpvotes() { return upvotes; }
+    public List<String> getFlaggedBy() {
+        List<String> userIds = new ArrayList<>();
+        for (Flag f : flags) {
+            userIds.add(f.getFlaggedBy());
+        }
+        return userIds;
+    }
+    public List<Flag> getFlags() { return flags; }
+}
