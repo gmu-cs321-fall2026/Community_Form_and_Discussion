@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Mason Career Community Forum</title>
+    <style>
+        :root{--ink:#202b3c;--muted:#68758a;--line:#e2e8f0;--paper:#f5f7fb;--white:#fff;--blue:#006633;--blue2:#e6f4ed;--shadow:0 10px 30px rgba(25,39,70,.07)}
+        *{box-sizing:border-box}
+        body{margin:0;background:var(--paper);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink)}
+        .topbar{background:#004d26;color:white;padding:15px max(22px,calc((100% - 1160px)/2));display:flex;align-items:center;justify-content:space-between;gap:20px}
+        .brand{font-size:19px;font-weight:800;letter-spacing:-.4px}
+        .brand span{color:#a3e4c1}
+        .top-right{font-size:13px;color:#cbd5e1}
+        .wrap{max-width:1160px;margin:30px auto;padding:0 20px}
+        .back-link { display: inline-block; margin-bottom: 20px; color: var(--blue); text-decoration: none; font-weight: bold; }
+        .back-link:hover { text-decoration: underline; }
+        .profile-container { background: var(--white); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 25px; margin-bottom: 20px; }
+        h2 { color: #004d26; margin-top: 0; }
+        .profile-post-card { background: #f7fafc; padding: 18px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid var(--blue); border: 1px solid var(--line); }
+        .profile-post-title { margin: 0 0 8px 0; font-size: 1.25em; color: var(--ink); }
+        .profile-post-body { margin: 0; color: var(--muted); line-height: 1.5; white-space: pre-wrap; }
+        .reply-history-item { background: #f7fafc; border: 1px solid var(--line); padding: 14px; border-radius: 10px; margin-bottom: 10px; }
+        .meta { font-size: 12px; color: var(--muted); }
+    </style>
+</head>
+<body>
+
+    <header class="topbar">
+        <div class="brand">Mason Career<span>Community Forum</span></div>
+        <div class="top-right">Student Profile View</div>
+    </header>
+
+    <main class="wrap">
+        <a href="postTest.html" class="back-link">&larr; Back to Forum Feed</a>
+
+        <div class="profile-container">
+            <h2 id="profileTitle">User Profile</h2>
+
+            <!-- Container where user's created posts and replies will load -->
+            <div id="profileContent">
+                <p class="meta">Loading profile data...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Script to automatically parse URL parameters and render profile history -->
+    <script src="testPost.js"></script>
+    <script>
+        // Automatically grab the target user from the URL query string (e.g., profile.html?user=AlexUser)
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUser = urlParams.get('user');
+
+        if (targetUser) {
+            renderProfilePage(targetUser, getCurrentUser());
+        } else {
+            document.getElementById('profileContent').innerHTML = "<p style='color: #c53030;'>No user specified.</p>";
+        }
+    </script>
+</body>
+</html>
