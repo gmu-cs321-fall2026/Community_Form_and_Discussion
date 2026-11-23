@@ -1,1 +1,21 @@
+CS 321 AI PROMPT LOG ENTRY
+Name: Reid Buckley
+Team / Subsystem: Subsystem 5, Community Forum & Discussion
+Date: 11/10-22/2026
+Tool: Gemini
 
+Asked: Gemini to connect existing features to the database using a Spring-Boot Maven format
+
+Produce: Gemini helped walk through how to set up and use  Spring-Boot Maven and produced code that needed to continuously be reprompted to
+to produce code that worked.
+Created code for each feature that eventually created file that were very large and difficult to refactor with minimal understanding of features of the code
+
+Changed: Gemini produced code that struggled with the <> frequently displaying List> instead of List<Map<String, Object>> 
+Gemini also need constant reprompting or rephrasing to help produce the required features and would constantly forget to update imports 
+which were manually added to make the code work
+
+Asked: Gemini to create a docker file for the project and how to use test data with the form to supplement information and features
+
+Produce: Gemini produced two docker files one for the backend and one for the project as a whole and created a docker-compose-yml
+
+Changed: when trying to supplement data some values had the wrong classification or were missing which needed to be updated
