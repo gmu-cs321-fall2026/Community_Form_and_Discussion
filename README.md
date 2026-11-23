@@ -39,3 +39,7 @@ community-forum-project/
 Running Docker
 docker compose up --build
 http://localhost:3000/postTest.html
+
+To run with test data
+run the command 
+Get-Content subsystem5_forum_tests_2.sql | docker exec -i mason-forum-db mysql -uroot -pcommunity_forum mason_forum
