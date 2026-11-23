@@ -1,0 +1,15 @@
+AI Prompt Log Entry
+Date: 2026-11-23
+Author: Michael Pieterse
+Story: Database security / SQL injection protection
+Tool: Claude (Anthropic)
+Files: subsystem5_forum_security.sql, subsystem5_forum_security_tests.sql, SQL_INJECTION_GUIDE.md, subsystem5_forum_tests.sql
+
+Asked:
+Add security to the MySQL forum database so it can't be accessed without authorization, and protect against SQL injection.
+Produced:
+A security script that creates two least-privilege MySQL accounts in place of connecting as root. forum_app is for the backend. It can read and write the forum tables but can't DELETE posts or replies (the app soft-deletes with status = 'removed'), can't change the schema, can only read app_user and category, and can only INSERT into moderation_action so the moderation log can't be edited or erased. forum_report can only read the three views. Both accounts have a connection limit and lock after 5 failed logins.
+A security test script that logs in as forum_app. It shows that normal app work still runs, and that an injection string passed as a parameter is stored as plain text. It then tries 13 attacker moves (DROP TABLE, DELETE all posts, edit or erase the mod log, promote a user to ADMIN, read mysql.user, read or write server files, GRANT, CREATE USER) and every one is denied.
+A guide for the Java side: parameterized queries with ?, a whitelist for the sort column since ? can't be used there, input parsing for ids and paging, the password kept in an env var, and no raw SQL errors sent to clients.
+Changed or rejected:
+Ran everything against a real MySQL 8.0.46 server. LOAD_FILE returned NULL rather than an error without the FILE privilege, so I fixed the expected result in the test comments. Fixed the D1 comment in subsystem5_forum_tests.sql, because MySQL actually blocks that delete on fk_post_helpful_reply first, not the moderation log. Passwords in the script are placeholders and must be changed before deployment. No Java code was changed because the Spring Boot database layer isn't in the repo yet.

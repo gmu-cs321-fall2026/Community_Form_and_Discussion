@@ -215,8 +215,9 @@ INSERT INTO post (author_id, category_id, title, body) VALUES (@alice, 9999, 'x'
    ===================================================================== */
 
 -- D1. Hard-deleting moderated content is BLOCKED -> 1451 Cannot delete parent row
--- Deleting r1 would cascade to r2, then to flag f1, but f1 has a
--- moderation_action row (fk_mod_flag, no cascade). This is intended:
+-- MySQL reports fk_post_helpful_reply first, because r1 is p1's helpful
+-- reply. Even without that, deleting r1 would cascade to r2, then to
+-- flag f1, and f1 has a moderation_action row (fk_mod_flag, no cascade). This is intended:
 -- the moderation log stays auditable, and the app soft-deletes with
 -- status = 'removed' instead of DELETE.
 DELETE FROM reply WHERE id = @r1;
