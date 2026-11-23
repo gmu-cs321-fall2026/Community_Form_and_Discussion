@@ -13,3 +13,10 @@ A security test script that logs in as forum_app. It shows that normal app work 
 A guide for the Java side: parameterized queries with ?, a whitelist for the sort column since ? can't be used there, input parsing for ids and paging, the password kept in an env var, and no raw SQL errors sent to clients.
 Changed or rejected:
 Ran everything against a real MySQL 8.0.46 server. LOAD_FILE returned NULL rather than an error without the FILE privilege, so I fixed the expected result in the test comments. Fixed the D1 comment in subsystem5_forum_tests.sql, because MySQL actually blocks that delete on fk_post_helpful_reply first, not the moderation log. Passwords in the script are placeholders and must be changed before deployment. No Java code was changed because the Spring Boot database layer isn't in the repo yet.
+
+Asked:
+Write a .txt explaining how the new security files are used.
+Produced:
+DATABASE_SECURITY_USAGE.txt in docs/Database Docs. It covers setup order, switching the backend to the forum_app login with the password in an env var, docker-compose init scripts, how to run and read the security tests, the Java rules, and common errors.
+Changed or rejected:
+Added a warning not to mount the whole Code/database folder into the MySQL init directory, since the test scripts would then run as root and the DROP TABLE test would actually succeed.

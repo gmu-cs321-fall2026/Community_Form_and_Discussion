@@ -1,0 +1,177 @@
+SUBSYSTEM 5 FORUM: HOW THE DATABASE SECURITY FILES ARE USED
+=====================================================================
+
+The security files do nothing just by sitting in the repo. Each one is
+used at a different point: when the database gets set up, when we
+check that setup, and when someone writes Java code.
+
+Here's the idea in one sentence. The Java code stops SQL injection,
+and the database login limits the damage if an attack ever slips
+through. You need both.
+
+
+---------------------------------------------------------------------
+THE FILES
+---------------------------------------------------------------------
+
+Code/database/subsystem5_forum_security.sql
+    Creates the database logins the app is supposed to use.
+    Run once, as root, right after the schema.
+
+Code/database/subsystem5_forum_security_tests.sql
+    Proves the logins are locked down. Run by hand, as forum_app.
+
+docs/Database Docs/SQL_INJECTION_GUIDE.md
+    Rules for anyone writing Java code that queries the database.
+    Used while coding and during PR review.
+
+
+---------------------------------------------------------------------
+1. SETTING UP THE DATABASE
+---------------------------------------------------------------------
+
+Run the schema first, then the security script. Order matters. The
+security script grants rights on tables, so the tables have to exist.
+
+    mysql -u root -p < Code/database/subsystem5_forum_mysql.sql
+    mysql -u root -p < Code/database/subsystem5_forum_security.sql
+
+This creates two logins:
+
+    forum_app      What the Spring Boot backend uses. It can read and
+                   write forum data, but it can't:
+                     - delete posts or replies (we hide them with
+                       status = 'removed' instead)
+                     - drop or alter tables
+                     - edit or erase the moderation log
+                     - change users or categories
+                     - read anything outside mason_forum
+
+    forum_report   Read-only, and only the three views. Good for
+                   anyone who just needs to look at data.
+
+Before running this anywhere but your own laptop, change the two
+CHANGE_ME passwords in the script. Don't commit the real ones.
+
+
+---------------------------------------------------------------------
+2. POINTING THE BACKEND AT forum_app
+---------------------------------------------------------------------
+
+This is the step that turns the protection on. Until the backend
+logs in as forum_app, step 1 just made an account nobody uses.
+
+In application.properties:
+
+    spring.datasource.url=jdbc:mysql://db:3306/mason_forum
+    spring.datasource.username=forum_app
+    spring.datasource.password=${FORUM_DB_PASSWORD}
+
+The password comes from an environment variable, not the file. Put
+it in a .env file next to docker-compose.yml and add .env to
+.gitignore:
+
+    FORUM_DB_PASSWORD=the_real_password
+    DB_ROOT_PASSWORD=the_real_root_password
+
+Timing: we're past feature freeze. Leave the backend on its current
+login until the integrated build works end to end. Then switch to
+forum_app and rerun the integration tests. If something fails with
+"command denied", that's a bug to fix, not a reason to give the app
+more rights. The usual cause is a query that does DELETE on posts or
+replies when it should set status = 'removed'.
+
+
+---------------------------------------------------------------------
+3. RUNNING IT WITH DOCKER-COMPOSE
+---------------------------------------------------------------------
+
+The official MySQL image runs any .sql file in
+/docker-entrypoint-initdb.d the first time the database starts, in
+alphabetical order. Mount the two setup files with number prefixes so
+they run in the right order:
+
+    db:
+      image: mysql:8.0
+      environment:
+        MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      volumes:
+        - ./Code/database/subsystem5_forum_mysql.sql:/docker-entrypoint-initdb.d/01_schema.sql
+        - ./Code/database/subsystem5_forum_security.sql:/docker-entrypoint-initdb.d/02_security.sql
+
+WARNING: don't mount the whole Code/database folder. Those scripts run
+as root, so the test files would run too. As root, the attack test's
+"DROP TABLE post" would actually work.
+
+These scripts only run the FIRST time, when the database volume is
+empty. To rerun them, wipe the volume:
+
+    docker compose down -v
+    docker compose up
+
+
+---------------------------------------------------------------------
+4. CHECKING THAT IT WORKS
+---------------------------------------------------------------------
+
+Load some sample data first: run PART A of subsystem5_forum_tests.sql
+as root. Then run the security tests logged in as forum_app, NOT root:
+
+    mysql -u forum_app -p mason_forum < Code/database/subsystem5_forum_security_tests.sql
+
+What you should see:
+
+    PART A   Everything succeeds. Test A3 stores the title
+             x'); DROP TABLE post; --
+             as plain text, and the post table is still there.
+             That's a parameterized query doing its job.
+
+    PART B   13 attack attempts. 12 fail with "command denied" or
+             "access denied". B10 (LOAD_FILE) returns NULL instead of
+             an error, which still means the file wasn't read.
+
+If anything in PART B succeeds, the backend has too many rights. Check
+that you're logged in as forum_app and not root:
+
+    SELECT CURRENT_USER();
+
+In MySQL Workbench, make a separate connection with the forum_app
+username, and run PART B one statement at a time with Ctrl+Enter.
+
+
+---------------------------------------------------------------------
+5. WRITING JAVA CODE
+---------------------------------------------------------------------
+
+Read SQL_INJECTION_GUIDE.md before writing any query. The short
+version:
+
+    - Never build SQL with + and user input. Use ? parameters.
+    - Sort options (GET /posts?sort=) go through a whitelist map,
+      because ? can't hold a column name.
+    - Parse ids as UUIDs and page numbers as ints. Max page size 50.
+    - Don't send raw SQL errors back to the client.
+    - Check the user's role in Java before writing. The database
+      login can't tell a student from a staff member.
+
+When reviewing a PR that touches the database, go through the
+checklist at the bottom of the guide.
+
+
+---------------------------------------------------------------------
+QUICK TROUBLESHOOTING
+---------------------------------------------------------------------
+
+"Access denied for user 'forum_app'"
+    Wrong password, or the account is locked after 5 bad tries. It
+    unlocks after 1 day, or root can run:
+        ALTER USER 'forum_app'@'%' ACCOUNT UNLOCK;
+
+"DELETE command denied ... for table 'post'"
+    Working as intended. Use UPDATE post SET status = 'removed'.
+
+"Unknown database" or "Table doesn't exist" when running the security script
+    You ran it before the schema. Run subsystem5_forum_mysql.sql first.
+
+Security script errors on "DROP ROLE" or "CREATE ROLE"
+    You need MySQL 8.0 or newer. Roles don't exist in 5.7.
